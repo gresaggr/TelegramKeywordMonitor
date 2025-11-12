@@ -1,7 +1,7 @@
 const ProfileModalComponent = {
     template: `
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
-            <div class="modal-content">
+            <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
                     <h2 class="modal-title">Profile Settings</h2>
                     <button @click="$emit('close')" class="btn-close">
@@ -25,6 +25,9 @@ const ProfileModalComponent = {
                     <span>{{ success }}</span>
                 </div>
 
+                <!-- Account Info -->
+                <h3 style="margin: 20px 0 15px; color: #1a202c;">Account Information</h3>
+                
                 <div class="form-group">
                     <label class="form-label">Email (read-only)</label>
                     <input
@@ -47,17 +50,18 @@ const ProfileModalComponent = {
                     >
                 </div>
 
+                <!-- Telegram Settings -->
+                <h3 style="margin: 30px 0 15px; color: #1a202c;">Telegram Settings</h3>
+
                 <div class="form-group">
                     <label class="form-label">Default Telegram Chat ID</label>
                     <input
-                        v-model="chatId"
+                        v-model="form.default_telegram_chat_id"
                         type="text"
                         class="form-input"
                         placeholder="123456789 or leave empty"
                     >
                     <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
-                        Current value: <strong>{{ user.default_telegram_chat_id || 'Not set' }}</strong><br>
-                        This Chat ID will be used by default for all new websites. 
                         <a href="#" @click.prevent="showTelegramHelp = !showTelegramHelp" style="color: #667eea;">
                             How to get Chat ID?
                         </a>
@@ -71,6 +75,64 @@ const ProfileModalComponent = {
                             4. Paste it here
                         </div>
                     </div>
+                </div>
+
+                <!-- Default Account Settings -->
+                <h3 style="margin: 30px 0 15px; color: #1a202c;">Default Telegram Account Settings</h3>
+                <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
+                    These values will be used by default when adding new Telegram accounts. You can override them for each account.
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">Default API ID</label>
+                        <input
+                            v-model="form.default_api_id"
+                            type="text"
+                            class="form-input"
+                            placeholder="2040"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Default API Hash</label>
+                        <input
+                            v-model="form.default_api_hash"
+                            type="text"
+                            class="form-input"
+                            placeholder="b18441a1ff607e10a989891a5462e627"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Default Device Model</label>
+                    <input
+                        v-model="form.default_device_model"
+                        type="text"
+                        class="form-input"
+                        placeholder="MS-7C75"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Default System Version</label>
+                    <input
+                        v-model="form.default_system_version"
+                        type="text"
+                        class="form-input"
+                        placeholder="Windows 10"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Default App Version</label>
+                    <input
+                        v-model="form.default_app_version"
+                        type="text"
+                        class="form-input"
+                        placeholder="4.8.3"
+                    >
                 </div>
 
                 <div class="modal-footer">
@@ -91,25 +153,42 @@ const ProfileModalComponent = {
             loading: false,
             error: '',
             success: '',
-            chatId: '',
-            overlayClicked: false
+            overlayClicked: false,
+            form: {
+                default_telegram_chat_id: '',
+                default_api_id: '',
+                default_api_hash: '',
+                default_device_model: '',
+                default_system_version: '',
+                default_app_version: ''
+            }
         };
     },
     created() {
-        console.log('ProfileModal created, user:', this.user);
-        this.chatId = this.user?.default_telegram_chat_id || '';
+        this.initForm();
     },
     watch: {
         user: {
-            handler(newUser) {
-                console.log('User changed in ProfileModal:', newUser);
-                this.chatId = newUser?.default_telegram_chat_id || '';
+            handler() {
+                this.initForm();
             },
             deep: true,
             immediate: true
         }
     },
     methods: {
+        initForm() {
+            if (this.user) {
+                this.form = {
+                    default_telegram_chat_id: this.user.default_telegram_chat_id || '',
+                    default_api_id: this.user.default_api_id || '2040',
+                    default_api_hash: this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627',
+                    default_device_model: this.user.default_device_model || 'MS-7C75',
+                    default_system_version: this.user.default_system_version || 'Windows 10',
+                    default_app_version: this.user.default_app_version || '4.8.3'
+                };
+            }
+        },
         handleOverlayClick() {
             this.overlayClicked = true;
         },
@@ -126,14 +205,17 @@ const ProfileModalComponent = {
 
             try {
                 const data = {
-                    default_telegram_chat_id: this.chatId || null
+                    default_telegram_chat_id: this.form.default_telegram_chat_id || null,
+                    default_api_id: this.form.default_api_id || null,
+                    default_api_hash: this.form.default_api_hash || null,
+                    default_device_model: this.form.default_device_model || null,
+                    default_system_version: this.form.default_system_version || null,
+                    default_app_version: this.form.default_app_version || null
                 };
 
-                console.log('Saving profile with data:', data);
                 await api.updateProfile(data);
                 this.success = 'Profile updated successfully!';
 
-                // Emit event to refresh user data
                 setTimeout(() => {
                     this.$emit('updated');
                     this.$emit('close');

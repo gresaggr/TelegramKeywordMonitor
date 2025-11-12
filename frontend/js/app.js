@@ -6,7 +6,7 @@ createApp({
         'register-component': RegisterComponent,
         'telegram-dashboard-component': TelegramDashboardComponent,
         'account-modal-component': AccountModalComponent,
-        'verify-code-modal-component': VerifyCodeModalComponent
+        'verify-code-modal-component': VerifyCodeModalComponent,
     },
     data() {
         return {

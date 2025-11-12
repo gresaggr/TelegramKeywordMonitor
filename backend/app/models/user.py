@@ -14,10 +14,17 @@ class User(Base):
     balance = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
     default_telegram_chat_id = Column(String, nullable=True)
-    admin_notification_chat_id = Column(String, nullable=True)  # Для уведомлений админа
+    admin_notification_chat_id = Column(String, nullable=True)
+
+    # Default Telegram account settings
+    default_api_id = Column(String, nullable=True, default="2040")
+    default_api_hash = Column(String, nullable=True, default="b18441a1ff607e10a989891a5462e627")
+    default_device_model = Column(String, nullable=True, default="MS-7C75")
+    default_system_version = Column(String, nullable=True, default="Windows 10")
+    default_app_version = Column(String, nullable=True, default="4.8.3")
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    # websites = relationship("Website", back_populates="user", cascade="all, delete-orphan")
     telegram_accounts = relationship("TelegramAccount", back_populates="user", cascade="all, delete-orphan")

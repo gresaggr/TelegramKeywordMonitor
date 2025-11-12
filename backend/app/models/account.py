@@ -24,6 +24,7 @@ class TelegramAccount(Base):
     phone_number = Column(String, nullable=False)
     api_id = Column(String, nullable=False)
     api_hash = Column(String, nullable=False)
+    phone_code_hash = Column(String, nullable=True)  # NEW: Store phone_code_hash for verification
 
     # Device info
     device_model = Column(String, nullable=True)
@@ -59,7 +60,7 @@ class TelegramAccount(Base):
 
 
 class AccountNotification(Base):
-    """Уведомления об ошибках для аккаунтов"""
+    """Notifications for account errors"""
     __tablename__ = "account_notifications"
 
     id = Column(Integer, primary_key=True, index=True)

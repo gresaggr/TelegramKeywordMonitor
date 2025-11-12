@@ -1,5 +1,4 @@
 from typing import Optional
-
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 
@@ -20,6 +19,11 @@ class UserLogin(BaseModel):
 
 class UserUpdate(BaseModel):
     default_telegram_chat_id: Optional[str] = None
+    default_api_id: Optional[str] = None
+    default_api_hash: Optional[str] = None
+    default_device_model: Optional[str] = None
+    default_system_version: Optional[str] = None
+    default_app_version: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -29,6 +33,11 @@ class UserResponse(BaseModel):
     email: EmailStr
     username: str
     default_telegram_chat_id: Optional[str]
+    default_api_id: Optional[str]
+    default_api_hash: Optional[str]
+    default_device_model: Optional[str]
+    default_system_version: Optional[str]
+    default_app_version: Optional[str]
     created_at: datetime
 
     class Config:

@@ -8,7 +8,6 @@ from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait
 from pyrogram.types import Message
 
-
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.account import TelegramAccount, AccountStatus, AccountNotification
@@ -82,10 +81,19 @@ class TelegramClientManager:
 
             # Start authorization process
             sent_code = await client.send_code(account.phone_number)
+
+            # CRITICAL FIX: Save phone_code_hash to database
+            await db.execute(
+                update(TelegramAccount)
+                .where(TelegramAccount.id == account.id)
+                .values(phone_code_hash=sent_code.phone_code_hash)
+            )
+            await db.commit()
+
             self.pending_auth[account.id] = client
 
             await self._update_account_status(db, account.id, AccountStatus.AWAITING_CODE)
-            logger.info(f"Auth code sent to {account.phone_number}")
+            logger.info(f"Auth code sent to {account.phone_number}, phone_code_hash saved")
             return client, True
 
         except FloodWait as e:
@@ -113,7 +121,7 @@ class TelegramClientManager:
             raise ValueError("No pending authentication for this account")
 
         try:
-            # Get account info
+            # Get account info with phone_code_hash
             result = await db.execute(
                 select(TelegramAccount).where(TelegramAccount.id == account_id)
             )
@@ -121,15 +129,26 @@ class TelegramClientManager:
             if not account:
                 raise ValueError("Account not found")
 
-            # Try to sign in
+            if not account.phone_code_hash:
+                raise ValueError("Phone code hash not found. Please request a new code.")
+
+            # CRITICAL FIX: Use phone_code_hash from database
             await client.sign_in(
                 phone_number=account.phone_number,
+                phone_code_hash=account.phone_code_hash,
                 phone_code=code
             )
 
             # Success - move to active clients
             self.pending_auth.pop(account_id)
             self.clients[account_id] = client
+
+            # Clear phone_code_hash after successful auth
+            await db.execute(
+                update(TelegramAccount)
+                .where(TelegramAccount.id == account_id)
+                .values(phone_code_hash=None)
+            )
 
             await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
 
@@ -149,6 +168,13 @@ class TelegramClientManager:
                 self.pending_auth.pop(account_id)
                 self.clients[account_id] = client
 
+                # Clear phone_code_hash
+                await db.execute(
+                    update(TelegramAccount)
+                    .where(TelegramAccount.id == account_id)
+                    .values(phone_code_hash=None)
+                )
+
                 await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
                 await self._start_monitoring(account_id, db)
 
@@ -166,7 +192,14 @@ class TelegramClientManager:
             raise ValueError(error_msg)
 
         except PhoneCodeExpired:
-            error_msg = "Verification code expired"
+            error_msg = "Verification code expired. Please request a new code."
+            # Clear expired phone_code_hash
+            await db.execute(
+                update(TelegramAccount)
+                .where(TelegramAccount.id == account_id)
+                .values(phone_code_hash=None)
+            )
+            await db.commit()
             await self._handle_error(db, account_id, error_msg, "code_expired")
             raise ValueError(error_msg)
 
@@ -187,7 +220,7 @@ class TelegramClientManager:
         result = await db.execute(
             select(TelegramAccount).where(TelegramAccount.id == account_id)
         )
-        account = result.scalar_one_or_none()
+        account: TelegramAccount = result.scalar_one_or_none()
         if not account:
             logger.error(f"Account {account_id} not found in database")
             return
@@ -200,51 +233,48 @@ class TelegramClientManager:
         replacements = json.loads(account.replacements or "{}")
 
         if not channels:
-            logger.warning(f"No channels configured for account {account_id}")
+            logger.warning(f"No channels configured for account {account.phone_number}")
             return
 
         if not forward_to:
-            logger.warning(f"No forward destination configured for account {account_id}")
+            logger.warning(f"No forward destination configured for account {account.phone_number}")
             return
 
         # Convert channel identifiers to proper format
         channel_filters = []
         for ch in channels:
             try:
-                # If it's a numeric ID
                 if ch.lstrip('-').isdigit():
                     channel_filters.append(int(ch))
                 else:
-                    # Username format
                     channel_filters.append(ch)
             except:
                 logger.warning(f"Invalid channel identifier: {ch}")
 
         if not channel_filters:
-            logger.error(f"No valid channels for account {account_id}")
+            logger.error(f"No valid channels for account {account.phone_number}")
             return
 
-        logger.info(f"Setting up monitoring for account {account_id} on channels: {channel_filters}")
+        logger.info(f"Setting up monitoring for account {account.phone_number} on channels: {channel_filters}")
 
         # Create message handler
         @client.on_message(filters.chat(channel_filters))
         async def handle_message(client: Client, message: Message):
             try:
-                # Get message text
                 text = message.text or message.caption or ""
                 if not text:
                     return
 
                 text_lower = text.lower()
 
-                # Check whitelist (if configured, at least one keyword must match)
+                # Check whitelist
                 has_whitelist_match = True
                 if whitelist:
                     has_whitelist_match = any(
                         keyword.lower() in text_lower for keyword in whitelist
                     )
 
-                # Check blacklist (if any keyword matches, skip)
+                # Check blacklist
                 has_blacklist_match = False
                 if blacklist:
                     has_blacklist_match = any(
@@ -253,26 +283,21 @@ class TelegramClientManager:
 
                 # Forward message if conditions are met
                 if has_whitelist_match and not has_blacklist_match:
-                    # Apply replacements if configured
                     modified_text = text
                     if replacements:
                         for old_text, new_text in replacements.items():
                             modified_text = modified_text.replace(old_text, new_text)
 
-                    # Forward or send modified message
                     if modified_text != text:
-                        # Text was modified, send as new message
                         await client.send_message(
                             chat_id=int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to,
                             text=modified_text
                         )
                     else:
-                        # No modifications, just forward
                         await message.forward(
                             chat_id=int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to
                         )
 
-                    # Update last activity
                     await db.execute(
                         update(TelegramAccount)
                         .where(TelegramAccount.id == account_id)
@@ -286,7 +311,7 @@ class TelegramClientManager:
                 logger.error(f"Error handling message for account {account_id}: {e}")
                 await self._handle_error(db, account_id, f"Message forwarding error: {str(e)}", "forwarding_error")
 
-        # Start the client if not already started
+        # Start the client
         try:
             if not client.is_connected:
                 await client.start()
@@ -294,7 +319,7 @@ class TelegramClientManager:
             account.is_active = True
             await db.commit()
 
-            logger.info(f"Monitoring started for account {account_id}")
+            logger.info(f"Monitoring started for account {account.phone_number}")
 
         except Exception as e:
             logger.error(f"Error starting monitoring for account {account_id}: {e}")
@@ -311,7 +336,6 @@ class TelegramClientManager:
             except Exception as e:
                 logger.error(f"Error stopping client {account_id}: {e}")
 
-        # Cancel any running tasks
         task = self.running_tasks.pop(account_id, None)
         if task and not task.done():
             task.cancel()
@@ -322,7 +346,6 @@ class TelegramClientManager:
         """Delete a Telegram client and its session"""
         await self.stop_client(account_id, db)
 
-        # Delete session file
         session_path = self._get_session_path(account_id)
         session_file = Path(f"{session_path}.session")
         if session_file.exists():
@@ -334,7 +357,6 @@ class TelegramClientManager:
 
     async def update_client_settings(self, account_id: int, db: AsyncSession):
         """Update monitoring settings for a running client"""
-        # Stop and restart with new settings
         await self.stop_client(account_id, db)
 
         result = await db.execute(
@@ -381,12 +403,10 @@ class TelegramClientManager:
             error_type: str
     ):
         """Handle errors by updating status and creating notifications"""
-        # Update account status
         await self._update_account_status(
             db, account_id, AccountStatus.ERROR, error_message, is_active=False
         )
 
-        # Create notification for user
         notification = AccountNotification(
             account_id=account_id,
             message=error_message,
@@ -394,7 +414,6 @@ class TelegramClientManager:
         )
         db.add(notification)
 
-        # Send to admin channel if configured
         if settings.TELEGRAM_BOT_TOKEN and settings.ADMIN_TELEGRAM_CHAT_ID:
             try:
                 from app.services.telegram import send_telegram_notification

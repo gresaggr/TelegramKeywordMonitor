@@ -61,26 +61,26 @@ const AccountModalComponent = {
                         Get your API credentials from <a href="https://my.telegram.org" target="_blank" style="color: #667eea;">my.telegram.org</a>
                     </small>
 
-                    <!-- Device Info (optional) -->
+                    <!-- Device Info -->
                     <details style="margin: 15px 0;">
-                        <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Device Settings (Optional)</summary>
+                        <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Device Settings</summary>
                         <div style="padding: 15px 0;">
                             <div class="form-group">
                                 <label class="form-label">Device Model</label>
-                                <input v-model="form.device_model" type="text" class="form-input" placeholder="PC">
+                                <input v-model="form.device_model" type="text" class="form-input" placeholder="MS-7C75">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">System Version</label>
-                                <input v-model="form.system_version" type="text" class="form-input" placeholder="Linux">
+                                <input v-model="form.system_version" type="text" class="form-input" placeholder="Windows 10">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">App Version</label>
-                                <input v-model="form.app_version" type="text" class="form-input" placeholder="1.0.0">
+                                <input v-model="form.app_version" type="text" class="form-input" placeholder="4.8.3">
                             </div>
                         </div>
                     </details>
 
-                    <!-- Proxy Settings (optional) -->
+                    <!-- Proxy Settings -->
                     <details style="margin: 15px 0;">
                         <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Proxy Settings (Optional)</summary>
                         <div style="padding: 15px 0;">
@@ -185,7 +185,7 @@ bad_word -> ***"
             </div>
         </div>
     `,
-    props: ['account', 'isEdit'],
+    props: ['account', 'isEdit', 'user'],
     data() {
         return {
             loading: false,
@@ -199,9 +199,9 @@ bad_word -> ***"
                 phone_number: '',
                 api_id: '',
                 api_hash: '',
-                device_model: 'PC',
-                system_version: 'Linux',
-                app_version: '1.0.0',
+                device_model: 'MS-7C75',
+                system_version: 'Windows 10',
+                app_version: '4.8.3',
                 proxy: {
                     host: '',
                     port: null,
@@ -231,6 +231,7 @@ bad_word -> ***"
         },
         initializeForm() {
             if (this.isEdit && this.account) {
+                // Edit mode - load account data
                 this.form = {
                     whitelist_keywords: this.account.whitelist_keywords || [],
                     blacklist_keywords: this.account.blacklist_keywords || [],
@@ -239,32 +240,41 @@ bad_word -> ***"
                     replacements: this.account.replacements || {}
                 };
 
-                this.whitelistInput = this.form.whitelist_keywords.join('\\n');
-                this.blacklistInput = this.form.blacklist_keywords.join('\\n');
-                this.channelsInput = this.form.monitored_channels.join('\\n');
+                this.whitelistInput = this.form.whitelist_keywords.join('\n');
+                this.blacklistInput = this.form.blacklist_keywords.join('\n');
+                this.channelsInput = this.form.monitored_channels.join('\n');
                 this.replacementsInput = Object.entries(this.form.replacements)
-                    .map(([k, v]) => `${k} -> ${v}`).join('\\n');
+                    .map(([k, v]) => `${k} -> ${v}`).join('\n');
+            } else {
+                // Create mode - use default values from user profile
+                if (this.user) {
+                    this.form.api_id = this.user.default_api_id || '2040';
+                    this.form.api_hash = this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627';
+                    this.form.device_model = this.user.default_device_model || 'MS-7C75';
+                    this.form.system_version = this.user.default_system_version || 'Windows 10';
+                    this.form.app_version = this.user.default_app_version || '4.8.3';
+                }
             }
         },
         parseTextareas() {
             this.form.whitelist_keywords = this.whitelistInput
-                .split('\\n')
+                .split('\n')
                 .map(s => s.trim())
                 .filter(s => s.length > 0);
 
             this.form.blacklist_keywords = this.blacklistInput
-                .split('\\n')
+                .split('\n')
                 .map(s => s.trim())
                 .filter(s => s.length > 0);
 
             this.form.monitored_channels = this.channelsInput
-                .split('\\n')
+                .split('\n')
                 .map(s => s.trim())
                 .filter(s => s.length > 0);
 
             // Parse replacements
             this.form.replacements = {};
-            this.replacementsInput.split('\\n').forEach(line => {
+            this.replacementsInput.split('\n').forEach(line => {
                 const parts = line.split('->').map(s => s.trim());
                 if (parts.length === 2 && parts[0] && parts[1]) {
                     this.form.replacements[parts[0]] = parts[1];

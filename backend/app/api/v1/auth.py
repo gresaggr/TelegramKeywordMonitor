@@ -35,12 +35,17 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_async_s
             detail="Username already taken"
         )
 
-    # Create new user
+    # Create new user with default settings
     new_user = User(
         email=user_data.email,
         username=user_data.username,
         hashed_password=get_password_hash(user_data.password),
-        balance=0.0
+        balance=0.0,
+        default_api_id="2040",
+        default_api_hash="b18441a1ff607e10a989891a5462e627",
+        default_device_model="MS-7C75",
+        default_system_version="Windows 10",
+        default_app_version="4.8.3"
     )
 
     db.add(new_user)
@@ -53,9 +58,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_async_s
 
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin, db: AsyncSession = Depends(get_async_session)):
-    """Login and get access token - использует EMAIL для входа"""
+    """Login and get access token"""
 
-    # Ищем пользователя по EMAIL
     result = await db.execute(select(User).where(User.email == credentials.email))
     user = result.scalar_one_or_none()
 
@@ -82,7 +86,7 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_async_ses
 async def get_current_user_info(
         current_user: User = Depends(get_current_user)
 ):
-    """Получение информации о текущем пользователе"""
+    """Get current user information"""
     return current_user
 
 
@@ -96,7 +100,7 @@ async def update_current_user(
 
     # Validate telegram chat ID if provided
     if user_data.default_telegram_chat_id is not None:
-        if user_data.default_telegram_chat_id:  # Only validate if not empty
+        if user_data.default_telegram_chat_id:
             is_valid = await validate_telegram_chat_id(user_data.default_telegram_chat_id)
             if not is_valid:
                 raise HTTPException(
@@ -104,6 +108,18 @@ async def update_current_user(
                     detail="Invalid Telegram chat ID. Make sure you've started the bot."
                 )
         current_user.default_telegram_chat_id = user_data.default_telegram_chat_id or None
+
+    # Update default Telegram settings
+    if user_data.default_api_id is not None:
+        current_user.default_api_id = user_data.default_api_id
+    if user_data.default_api_hash is not None:
+        current_user.default_api_hash = user_data.default_api_hash
+    if user_data.default_device_model is not None:
+        current_user.default_device_model = user_data.default_device_model
+    if user_data.default_system_version is not None:
+        current_user.default_system_version = user_data.default_system_version
+    if user_data.default_app_version is not None:
+        current_user.default_app_version = user_data.default_app_version
 
     await db.commit()
     await db.refresh(current_user)
