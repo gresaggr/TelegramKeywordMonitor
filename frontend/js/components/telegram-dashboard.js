@@ -22,7 +22,7 @@ const TelegramDashboardComponent = {
                         <div class="user-info">
                             <div class="user-name">{{ user.username }}</div>
                             <div class="user-email">{{ user.email }}</div>
-                            <div class="user-balance">Balance: ${{user.balance.toFixed(2)}}</div>
+                            <div class="user-balance">Balance: 0</div>
                         </div>
                         <button @click="showTopupModal = true" class="btn-settings" title="Top Up Balance" style="margin-right: 10px;">
                             <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor;">

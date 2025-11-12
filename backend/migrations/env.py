@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Импортируем ВСЕ модели чтобы Base.metadata их увидел
 from app.models.user import User
-from app.models.website import Website
+from app.models.account import TelegramAccount, AccountNotification
 
 config = context.config
 

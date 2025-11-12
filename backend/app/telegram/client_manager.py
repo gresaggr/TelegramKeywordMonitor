@@ -1,32 +1,13 @@
 import asyncio
 import json
-import re
-from typing import Dict, Optional, Tuple
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
-try:
-    from pyrogram import Client, filters
-    from pyrogram.types import Message
-    from pyrogram.errors import (
-        SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired,
-        FloodWait, AuthKeyUnregistered, UserDeactivated
-    )
-except ImportError:
-    # Fallback если pyrogram не установлен
-    print("WARNING: pyrogram not installed, using mock classes")
+from pyrogram import Client, filters
+from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait
+from pyrogram.types import Message
 
-
-    class Client:
-        pass
-
-
-    class filters:
-        pass
-
-
-    class Message:
-        pass
 
 from app.core.config import settings
 from app.core.logger import get_logger
@@ -46,7 +27,8 @@ class TelegramClientManager:
         self.running_tasks: Dict[int, asyncio.Task] = {}
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
-    def _get_session_path(self, account_id: int) -> str:
+    @staticmethod
+    def _get_session_path(account_id: int) -> str:
         """Get session file path for an account"""
         return f"{settings.SESSIONS_DIR}/account_{account_id}"
 
@@ -75,7 +57,7 @@ class TelegramClientManager:
 
         try:
             client = Client(
-                name=session_path,
+                name=account.phone_number.replace("+", ""),
                 api_id=int(account.api_id),
                 api_hash=account.api_hash,
                 phone_number=account.phone_number,
@@ -89,11 +71,14 @@ class TelegramClientManager:
             await client.connect()
 
             # Check if already authorized
-            if await client.is_user_authorized():
+            try:
+                await client.get_me()
                 logger.info(f"Account {account.id} already authorized")
                 self.clients[account.id] = client
                 await self._update_account_status(db, account.id, AccountStatus.ACTIVE)
                 return client, False
+            except:
+                pass  # Not authorized, proceed to auth process
 
             # Start authorization process
             sent_code = await client.send_code(account.phone_number)
