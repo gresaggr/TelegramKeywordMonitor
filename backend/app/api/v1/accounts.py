@@ -28,7 +28,7 @@ async def create_account(
     """Create a new Telegram account and start authentication"""
     try:
         account = await AccountService.create_account(account_data, current_user, db)
-        return await AccountService.get_account_with_notification_count(account, db)
+        return account
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -51,7 +51,7 @@ async def verify_code(
             current_user,
             db
         )
-        return await AccountService.get_account_with_notification_count(account, db)
+        return account
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -65,8 +65,7 @@ async def get_accounts(
         db: AsyncSession = Depends(get_async_session)
 ):
     """Get all Telegram accounts for the current user"""
-    accounts = await AccountService.get_accounts(current_user, db)
-    return [await AccountService.get_account_with_notification_count(acc, db) for acc in accounts]
+    return await AccountService.get_accounts(current_user, db)
 
 
 @router.get("/{account_id}", response_model=TelegramAccountResponse)
@@ -77,8 +76,7 @@ async def get_account(
 ):
     """Get a specific Telegram account"""
     try:
-        account = await AccountService.get_account(account_id, current_user, db)
-        return await AccountService.get_account_with_notification_count(account, db)
+        return await AccountService.get_account(account_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -92,8 +90,7 @@ async def update_account(
 ):
     """Update Telegram account monitoring settings"""
     try:
-        account = await AccountService.update_account(account_id, account_data, current_user, db)
-        return await AccountService.get_account_with_notification_count(account, db)
+        return await AccountService.update_account(account_id, account_data, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -106,8 +103,7 @@ async def start_account(
 ):
     """Start/resume monitoring for a Telegram account"""
     try:
-        account = await AccountService.start_account(account_id, current_user, db)
-        return await AccountService.get_account_with_notification_count(account, db)
+        return await AccountService.start_account(account_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -123,8 +119,7 @@ async def stop_account(
 ):
     """Stop monitoring for a Telegram account"""
     try:
-        account = await AccountService.stop_account(account_id, current_user, db)
-        return await AccountService.get_account_with_notification_count(account, db)
+        return await AccountService.stop_account(account_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

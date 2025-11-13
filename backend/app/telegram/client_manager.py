@@ -42,7 +42,6 @@ class TelegramClientManager:
         """
         session_path = self._get_session_path(account.id)
 
-        # Setup proxy if configured
         proxy_dict = None
         if account.proxy_host and account.proxy_port:
             proxy_dict = {
@@ -69,7 +68,6 @@ class TelegramClientManager:
 
             await client.connect()
 
-            # Check if already authorized
             try:
                 await client.get_me()
                 logger.info(f"Account {account.id} already authorized")
@@ -77,12 +75,10 @@ class TelegramClientManager:
                 await self._update_account_status(db, account.id, AccountStatus.ACTIVE)
                 return client, False
             except:
-                pass  # Not authorized, proceed to auth process
+                pass
 
-            # Start authorization process
             sent_code = await client.send_code(account.phone_number)
 
-            # CRITICAL FIX: Save phone_code_hash to database
             await db.execute(
                 update(TelegramAccount)
                 .where(TelegramAccount.id == account.id)
@@ -121,7 +117,6 @@ class TelegramClientManager:
             raise ValueError("No pending authentication for this account")
 
         try:
-            # Get account info with phone_code_hash
             result = await db.execute(
                 select(TelegramAccount).where(TelegramAccount.id == account_id)
             )
@@ -132,27 +127,22 @@ class TelegramClientManager:
             if not account.phone_code_hash:
                 raise ValueError("Phone code hash not found. Please request a new code.")
 
-            # CRITICAL FIX: Use phone_code_hash from database
             await client.sign_in(
                 phone_number=account.phone_number,
                 phone_code_hash=account.phone_code_hash,
                 phone_code=code
             )
 
-            # Success - move to active clients
             self.pending_auth.pop(account_id)
             self.clients[account_id] = client
 
-            # Clear phone_code_hash after successful auth
             await db.execute(
                 update(TelegramAccount)
                 .where(TelegramAccount.id == account_id)
-                .values(phone_code_hash=None)
+                .values(phone_code_hash=None, error_message=None)
             )
 
             await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
-
-            # Start monitoring
             await self._start_monitoring(account_id, db)
 
             logger.info(f"Account {account_id} successfully authorized")
@@ -168,11 +158,10 @@ class TelegramClientManager:
                 self.pending_auth.pop(account_id)
                 self.clients[account_id] = client
 
-                # Clear phone_code_hash
                 await db.execute(
                     update(TelegramAccount)
                     .where(TelegramAccount.id == account_id)
-                    .values(phone_code_hash=None)
+                    .values(phone_code_hash=None, error_message=None)
                 )
 
                 await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
@@ -193,7 +182,6 @@ class TelegramClientManager:
 
         except PhoneCodeExpired:
             error_msg = "Verification code expired. Please request a new code."
-            # Clear expired phone_code_hash
             await db.execute(
                 update(TelegramAccount)
                 .where(TelegramAccount.id == account_id)
@@ -216,7 +204,6 @@ class TelegramClientManager:
             logger.warning(f"No client found for account {account_id}")
             return
 
-        # Get account settings
         result = await db.execute(
             select(TelegramAccount).where(TelegramAccount.id == account_id)
         )
@@ -225,7 +212,6 @@ class TelegramClientManager:
             logger.error(f"Account {account_id} not found in database")
             return
 
-        # Parse settings
         whitelist = json.loads(account.whitelist_keywords or "[]")
         blacklist = json.loads(account.blacklist_keywords or "[]")
         channels = json.loads(account.monitored_channels or "[]")
@@ -240,7 +226,6 @@ class TelegramClientManager:
             logger.warning(f"No forward destination configured for account {account.phone_number}")
             return
 
-        # Convert channel identifiers to proper format
         channel_filters = []
         for ch in channels:
             try:
@@ -257,7 +242,6 @@ class TelegramClientManager:
 
         logger.info(f"Setting up monitoring for account {account.phone_number} on channels: {channel_filters}")
 
-        # Create message handler
         @client.on_message(filters.chat(channel_filters))
         async def handle_message(client: Client, message: Message):
             try:
@@ -267,21 +251,18 @@ class TelegramClientManager:
 
                 text_lower = text.lower()
 
-                # Check whitelist
                 has_whitelist_match = True
                 if whitelist:
                     has_whitelist_match = any(
                         keyword.lower() in text_lower for keyword in whitelist
                     )
 
-                # Check blacklist
                 has_blacklist_match = False
                 if blacklist:
                     has_blacklist_match = any(
                         keyword.lower() in text_lower for keyword in blacklist
                     )
 
-                # Forward message if conditions are met
                 if has_whitelist_match and not has_blacklist_match:
                     modified_text = text
                     if replacements:
@@ -311,12 +292,12 @@ class TelegramClientManager:
                 logger.error(f"Error handling message for account {account_id}: {e}")
                 await self._handle_error(db, account_id, f"Message forwarding error: {str(e)}", "forwarding_error")
 
-        # Start the client
         try:
             if not client.is_connected:
                 await client.start()
 
             account.is_active = True
+            account.error_message = None
             await db.commit()
 
             logger.info(f"Monitoring started for account {account.phone_number}")
@@ -417,11 +398,13 @@ class TelegramClientManager:
         if settings.TELEGRAM_BOT_TOKEN and settings.ADMIN_TELEGRAM_CHAT_ID:
             try:
                 from app.services.telegram import send_telegram_notification
+                error_safe = error_message.replace('*', '\\*').replace('_', '\\_').replace('[', '\\[').replace('`',
+                                                                                                               '\\`')
                 admin_message = (
                     f"⚠️ *Telegram Account Error*\n\n"
                     f"*Account ID:* {account_id}\n"
                     f"*Error Type:* {error_type}\n"
-                    f"*Message:* {error_message}\n"
+                    f"*Message:* {error_safe}\n"
                     f"*Time:* {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
                 )
                 await send_telegram_notification(settings.ADMIN_TELEGRAM_CHAT_ID, admin_message)
@@ -432,5 +415,4 @@ class TelegramClientManager:
         logger.error(f"Error handled for account {account_id}: {error_message}")
 
 
-# Global instance
 telegram_manager = TelegramClientManager()

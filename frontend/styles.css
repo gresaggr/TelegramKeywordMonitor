@@ -1160,3 +1160,62 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 }
+
+.password-input-container {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #718096;
+    padding: 5px;
+}
+
+.password-toggle:hover {
+    color: #4a5568;
+}
+
+.password-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Password input wrapper */
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper .form-input {
+    padding-right: 45px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #718096;
+    transition: color 0.3s;
+    outline: none;
+}
+
+.password-toggle:hover {
+    color: #667eea;
+}
+
+.password-toggle svg {
+    fill: currentColor;
+}
