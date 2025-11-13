@@ -22,6 +22,7 @@ class User(Base):
     default_device_model = Column(String, nullable=True, default="MS-7C75")
     default_system_version = Column(String, nullable=True, default="Windows 10")
     default_app_version = Column(String, nullable=True, default="4.8.3")
+    default_forward_to_chat_id = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

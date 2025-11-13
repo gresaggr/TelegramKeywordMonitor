@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
     default_device_model: Optional[str] = None
     default_system_version: Optional[str] = None
     default_app_version: Optional[str] = None
+    default_forward_to_chat_id: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -38,6 +39,7 @@ class UserResponse(BaseModel):
     default_device_model: Optional[str]
     default_system_version: Optional[str]
     default_app_version: Optional[str]
+    default_forward_to_chat_id: Optional[str]
     created_at: datetime
 
     class Config:

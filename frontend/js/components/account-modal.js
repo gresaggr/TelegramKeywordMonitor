@@ -231,7 +231,6 @@ bad_word -> ***"
         },
         initializeForm() {
             if (this.isEdit && this.account) {
-                // Edit mode - load account data
                 this.form = {
                     whitelist_keywords: this.account.whitelist_keywords || [],
                     blacklist_keywords: this.account.blacklist_keywords || [],
@@ -246,13 +245,13 @@ bad_word -> ***"
                 this.replacementsInput = Object.entries(this.form.replacements)
                     .map(([k, v]) => `${k} -> ${v}`).join('\n');
             } else {
-                // Create mode - use default values from user profile
                 if (this.user) {
                     this.form.api_id = this.user.default_api_id || '2040';
                     this.form.api_hash = this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627';
                     this.form.device_model = this.user.default_device_model || 'MS-7C75';
                     this.form.system_version = this.user.default_system_version || 'Windows 10';
                     this.form.app_version = this.user.default_app_version || '4.8.3';
+                    this.form.forward_to_chat_id = this.user.default_forward_to_chat_id || '';
                 }
             }
         },
@@ -272,7 +271,6 @@ bad_word -> ***"
                 .map(s => s.trim())
                 .filter(s => s.length > 0);
 
-            // Parse replacements
             this.form.replacements = {};
             this.replacementsInput.split('\n').forEach(line => {
                 const parts = line.split('->').map(s => s.trim());
@@ -285,7 +283,6 @@ bad_word -> ***"
             this.error = '';
             this.parseTextareas();
 
-            // Validation
             if (!this.isEdit) {
                 if (!this.form.phone_number || !this.form.api_id || !this.form.api_hash) {
                     this.error = 'Please fill in phone number, API ID and API Hash';
@@ -308,7 +305,6 @@ bad_word -> ***"
             try {
                 const data = {...this.form};
 
-                // Clean proxy if empty
                 if (!data.proxy || !data.proxy.host) {
                     delete data.proxy;
                 }

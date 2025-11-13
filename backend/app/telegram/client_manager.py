@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from pyrogram import Client, filters, idle
+from pyrogram import Client, filters
 from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
@@ -25,13 +25,46 @@ class TelegramClientManager:
         self.clients: Dict[int, Client] = {}
         self.pending_auth: Dict[int, Client] = {}
         self.running_tasks: Dict[int, asyncio.Task] = {}
-        self.handlers: Dict[int, int] = {}  # Store handler groups
+        self.handlers: Dict[int, int] = {}
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def _get_session_path(account_id: int) -> str:
         """Get session file path for an account"""
         return f"{settings.SESSIONS_DIR}/account_{account_id}"
+
+    async def startup_restore_accounts(self, db: AsyncSession):
+        """Restore active accounts on startup"""
+        try:
+            result = await db.execute(
+                select(TelegramAccount).where(
+                    TelegramAccount.status == AccountStatus.ACTIVE,
+                    TelegramAccount.is_active == True
+                )
+            )
+            accounts = result.scalars().all()
+
+            logger.info(f"Found {len(accounts)} active accounts to restore")
+
+            for account in accounts:
+                try:
+                    logger.info(f"Restoring account {account.id} [{account.phone_number}]")
+                    client, needs_auth = await self.create_client(account, db)
+
+                    if not needs_auth:
+                        await self._start_monitoring(account.id, db)
+                        logger.info(f"Account {account.id} [{account.phone_number}] restored successfully")
+                    else:
+                        logger.warning(f"Account {account.id} needs re-authentication")
+                        await self._update_account_status(
+                            db, account.id, AccountStatus.AWAITING_CODE, is_active=False
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to restore account {account.id}: {e}")
+                    await self._handle_error(db, account.id, f"Startup restore failed: {str(e)}", "startup_error")
+
+        except Exception as e:
+            logger.error(f"Error during startup account restore: {e}")
 
     async def create_client(
             self,
@@ -42,7 +75,6 @@ class TelegramClientManager:
         Create and initialize a Telegram client
         Returns: (client, needs_auth)
         """
-        # Close existing client if any
         if account.id in self.clients:
             await self.stop_client(account.id, db)
             await asyncio.sleep(1)
@@ -87,7 +119,6 @@ class TelegramClientManager:
 
             sent_code = await client.send_code(account.phone_number)
 
-            # Create new session for database operation
             from sqlalchemy.ext.asyncio import async_sessionmaker
             from app.db.session import engine
             async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -130,7 +161,6 @@ class TelegramClientManager:
             raise ValueError("No pending authentication for this account")
 
         try:
-            # Create new session for database operation
             from sqlalchemy.ext.asyncio import async_sessionmaker
             from app.db.session import engine
             async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -239,7 +269,6 @@ class TelegramClientManager:
             logger.warning(f"No client found for account {account_id}")
             return
 
-        # Create new session for database operation
         from sqlalchemy.ext.asyncio import async_sessionmaker
         from app.db.session import engine
         async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -283,14 +312,12 @@ class TelegramClientManager:
 
         logger.info(f"Setting up monitoring for account {account.phone_number} on channels: {channel_filters}")
 
-        # Remove old handlers if any
         if account_id in self.handlers:
             try:
                 client.remove_handler(*self.handlers[account_id])
             except:
                 pass
 
-        # Create handler
         async def handle_message(client_instance: Client, message: Message):
             try:
                 text = message.text or message.caption or ""
@@ -317,15 +344,15 @@ class TelegramClientManager:
                         for old_text, new_text in replacements.items():
                             modified_text = modified_text.replace(old_text, new_text)
 
+                    forward_chat_id = int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to
+
                     if modified_text != text:
                         await client_instance.send_message(
-                            chat_id=int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to,
+                            chat_id=forward_chat_id,
                             text=modified_text
                         )
                     else:
-                        await message.forward(
-                            chat_id=int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to
-                        )
+                        await message.forward(chat_id=forward_chat_id)
 
                     from sqlalchemy.ext.asyncio import async_sessionmaker
                     from app.db.session import engine
@@ -350,19 +377,17 @@ class TelegramClientManager:
                                              "forwarding_error")
 
         try:
-            # Register handler
             handler = MessageHandler(
                 callback=handle_message,
                 filters=filters.chat(channel_filters)
             )
-            handler_group = client.add_handler(handler, group=account_id)
-
-            self.handlers[account_id] = (handler_group, account_id)
 
             if not client.is_connected:
                 await client.start()
 
-            # Create new session for status update
+            handler_group = client.add_handler(handler, group=account_id)
+            self.handlers[account_id] = (handler_group, account_id)
+
             async with async_session() as new_session:
                 result = await new_session.execute(
                     select(TelegramAccount).where(TelegramAccount.id == account_id)
@@ -381,7 +406,6 @@ class TelegramClientManager:
 
     async def stop_client(self, account_id: int, db: AsyncSession):
         """Stop a Telegram client"""
-        # Remove handler
         if account_id in self.handlers:
             try:
                 client = self.clients.get(account_id)
@@ -411,13 +435,11 @@ class TelegramClientManager:
         """Delete a Telegram client and its session"""
         await self.stop_client(account_id, db)
 
-        # Wait for client to fully stop
         await asyncio.sleep(2)
 
         session_path = self._get_session_path(account_id)
         session_file = Path(f"{session_path}.session")
 
-        # Try to delete session file with retries
         for attempt in range(5):
             try:
                 if session_file.exists():
@@ -436,7 +458,6 @@ class TelegramClientManager:
         await self.stop_client(account_id, db)
         await asyncio.sleep(1)
 
-        # Create new session for database operation
         from sqlalchemy.ext.asyncio import async_sessionmaker
         from app.db.session import engine
         async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -471,7 +492,6 @@ class TelegramClientManager:
         if is_active is not None:
             values["is_active"] = is_active
 
-        # Create new session for database operation
         from sqlalchemy.ext.asyncio import async_sessionmaker
         from app.db.session import engine
         async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -496,7 +516,6 @@ class TelegramClientManager:
             db, account_id, AccountStatus.ERROR, error_message, is_active=False
         )
 
-        # Create new session for notification
         from sqlalchemy.ext.asyncio import async_sessionmaker
         from app.db.session import engine
         async_session = async_sessionmaker(engine, expire_on_commit=False)

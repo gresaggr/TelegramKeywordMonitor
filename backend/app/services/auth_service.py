@@ -78,6 +78,8 @@ class AuthService:
             user.default_system_version = user_data.default_system_version
         if user_data.default_app_version is not None:
             user.default_app_version = user_data.default_app_version
+        if user_data.default_forward_to_chat_id is not None:
+            user.default_forward_to_chat_id = user_data.default_forward_to_chat_id
 
         await db.commit()
         await db.refresh(user)

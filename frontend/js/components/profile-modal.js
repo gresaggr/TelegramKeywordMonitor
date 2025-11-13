@@ -77,6 +77,19 @@ const ProfileModalComponent = {
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">Default Forward To Chat ID</label>
+                    <input
+                        v-model="form.default_forward_to_chat_id"
+                        type="text"
+                        class="form-input"
+                        placeholder="-1001234567890 or @username"
+                    >
+                    <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
+                        Default destination for forwarding messages when adding new accounts
+                    </small>
+                </div>
+
                 <!-- Default Account Settings -->
                 <h3 style="margin: 30px 0 15px; color: #1a202c;">Default Telegram Account Settings</h3>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
@@ -160,7 +173,8 @@ const ProfileModalComponent = {
                 default_api_hash: '',
                 default_device_model: '',
                 default_system_version: '',
-                default_app_version: ''
+                default_app_version: '',
+                default_forward_to_chat_id: ''
             }
         };
     },
@@ -185,7 +199,8 @@ const ProfileModalComponent = {
                     default_api_hash: this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627',
                     default_device_model: this.user.default_device_model || 'MS-7C75',
                     default_system_version: this.user.default_system_version || 'Windows 10',
-                    default_app_version: this.user.default_app_version || '4.8.3'
+                    default_app_version: this.user.default_app_version || '4.8.3',
+                    default_forward_to_chat_id: this.user.default_forward_to_chat_id || ''
                 };
             }
         },
@@ -210,7 +225,8 @@ const ProfileModalComponent = {
                     default_api_hash: this.form.default_api_hash || null,
                     default_device_model: this.form.default_device_model || null,
                     default_system_version: this.form.default_system_version || null,
-                    default_app_version: this.form.default_app_version || null
+                    default_app_version: this.form.default_app_version || null,
+                    default_forward_to_chat_id: this.form.default_forward_to_chat_id || null
                 };
 
                 await api.updateProfile(data);

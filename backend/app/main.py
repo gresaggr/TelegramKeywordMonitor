@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.logger import logger
 from app.api.v1 import auth, balance, accounts
+from app.telegram.client_manager import telegram_manager
+from app.db.session import async_session_maker
 
 
 @asynccontextmanager
@@ -16,9 +18,18 @@ async def lifespan(app: FastAPI):
     logger.info(f"📊 Database: {settings.DATABASE_URL.split('@')[1]}")
     logger.info(f"📮 Redis: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
     logger.info(f"📁 Sessions: {settings.SESSIONS_DIR}")
-    logger.info(f"🔔 Telegram Bot: {'✓ Configured' if settings.TELEGRAM_BOT_TOKEN else '✗ Not configured'}")
+    if settings.TELEGRAM_BOT_TOKEN:
+        logger.info(f"🔔 Telegram Bot: ✓ Configured")
+    else:
+        logger.info(f"🔔 Telegram Bot: ✗ Not configured")
     logger.info("=" * 60)
+
+    # Restore active accounts
+    async with async_session_maker() as db:
+        await telegram_manager.startup_restore_accounts(db)
+
     yield
+
     logger.info("=" * 60)
     logger.info("🛑 Application shutting down...")
     logger.info("=" * 60)
@@ -33,17 +44,15 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # В production настроить конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
 
-# Include routers
 app.include_router(
     auth.router,
     prefix=f"{settings.API_V1_PREFIX}/auth",
