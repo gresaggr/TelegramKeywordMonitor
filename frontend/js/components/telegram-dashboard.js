@@ -1,4 +1,5 @@
 const TelegramDashboardComponent = {
+    name: 'TelegramDashboardComponent',
     components: {
         'account-modal-component': AccountModalComponent,
         'verify-code-modal-component': VerifyCodeModalComponent,
