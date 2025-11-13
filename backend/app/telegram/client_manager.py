@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.errors import SessionPasswordNeeded, PhoneCodeInvalid, PhoneCodeExpired, FloodWait
+from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
 
 from app.core.config import settings
@@ -24,6 +25,7 @@ class TelegramClientManager:
         self.clients: Dict[int, Client] = {}
         self.pending_auth: Dict[int, Client] = {}
         self.running_tasks: Dict[int, asyncio.Task] = {}
+        self.handlers: Dict[int, int] = {}  # Store handler groups
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
@@ -40,6 +42,11 @@ class TelegramClientManager:
         Create and initialize a Telegram client
         Returns: (client, needs_auth)
         """
+        # Close existing client if any
+        if account.id in self.clients:
+            await self.stop_client(account.id, db)
+            await asyncio.sleep(1)
+
         session_path = self._get_session_path(account.id)
 
         proxy_dict = None
@@ -55,7 +62,7 @@ class TelegramClientManager:
 
         try:
             client = Client(
-                name=account.phone_number.replace("+", ""),
+                name=f"account_{account.id}",
                 api_id=int(account.api_id),
                 api_hash=account.api_hash,
                 phone_number=account.phone_number,
@@ -63,7 +70,8 @@ class TelegramClientManager:
                 system_version=account.system_version or "Linux",
                 app_version=account.app_version or "1.0.0",
                 proxy=proxy_dict,
-                workdir=settings.SESSIONS_DIR
+                workdir=settings.SESSIONS_DIR,
+                in_memory=False
             )
 
             await client.connect()
@@ -79,12 +87,17 @@ class TelegramClientManager:
 
             sent_code = await client.send_code(account.phone_number)
 
-            await db.execute(
-                update(TelegramAccount)
-                .where(TelegramAccount.id == account.id)
-                .values(phone_code_hash=sent_code.phone_code_hash)
-            )
-            await db.commit()
+            # Create new session for database operation
+            from sqlalchemy.ext.asyncio import async_sessionmaker
+            from app.db.session import engine
+            async_session = async_sessionmaker(engine, expire_on_commit=False)
+            async with async_session() as new_session:
+                await new_session.execute(
+                    update(TelegramAccount)
+                    .where(TelegramAccount.id == account.id)
+                    .values(phone_code_hash=sent_code.phone_code_hash)
+                )
+                await new_session.commit()
 
             self.pending_auth[account.id] = client
 
@@ -117,35 +130,45 @@ class TelegramClientManager:
             raise ValueError("No pending authentication for this account")
 
         try:
-            result = await db.execute(
-                select(TelegramAccount).where(TelegramAccount.id == account_id)
-            )
-            account = result.scalar_one_or_none()
-            if not account:
-                raise ValueError("Account not found")
+            # Create new session for database operation
+            from sqlalchemy.ext.asyncio import async_sessionmaker
+            from app.db.session import engine
+            async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-            if not account.phone_code_hash:
-                raise ValueError("Phone code hash not found. Please request a new code.")
+            async with async_session() as new_session:
+                result = await new_session.execute(
+                    select(TelegramAccount).where(TelegramAccount.id == account_id)
+                )
+                account: TelegramAccount = result.scalar_one_or_none()
+                if not account:
+                    raise ValueError("Account not found")
+
+                if not account.phone_code_hash:
+                    raise ValueError("Phone code hash not found. Please request a new code.")
+
+                phone_code_hash = account.phone_code_hash
 
             await client.sign_in(
                 phone_number=account.phone_number,
-                phone_code_hash=account.phone_code_hash,
+                phone_code_hash=phone_code_hash,
                 phone_code=code
             )
 
             self.pending_auth.pop(account_id)
             self.clients[account_id] = client
 
-            await db.execute(
-                update(TelegramAccount)
-                .where(TelegramAccount.id == account_id)
-                .values(phone_code_hash=None, error_message=None)
-            )
+            async with async_session() as new_session:
+                await new_session.execute(
+                    update(TelegramAccount)
+                    .where(TelegramAccount.id == account_id)
+                    .values(phone_code_hash=None, error_message=None)
+                )
+                await new_session.commit()
 
             await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
             await self._start_monitoring(account_id, db)
 
-            logger.info(f"Account {account_id} successfully authorized")
+            logger.info(f"Account {account_id} [{account.phone_number}] successfully authorized")
             return True
 
         except SessionPasswordNeeded:
@@ -158,16 +181,22 @@ class TelegramClientManager:
                 self.pending_auth.pop(account_id)
                 self.clients[account_id] = client
 
-                await db.execute(
-                    update(TelegramAccount)
-                    .where(TelegramAccount.id == account_id)
-                    .values(phone_code_hash=None, error_message=None)
-                )
+                from sqlalchemy.ext.asyncio import async_sessionmaker
+                from app.db.session import engine
+                async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+                async with async_session() as new_session:
+                    await new_session.execute(
+                        update(TelegramAccount)
+                        .where(TelegramAccount.id == account_id)
+                        .values(phone_code_hash=None, error_message=None)
+                    )
+                    await new_session.commit()
 
                 await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
                 await self._start_monitoring(account_id, db)
 
-                logger.info(f"Account {account_id} authorized with 2FA")
+                logger.info(f"Account {account_id} [{account.phone_number}] authorized with 2FA")
                 return True
 
             except Exception as e:
@@ -182,12 +211,18 @@ class TelegramClientManager:
 
         except PhoneCodeExpired:
             error_msg = "Verification code expired. Please request a new code."
-            await db.execute(
-                update(TelegramAccount)
-                .where(TelegramAccount.id == account_id)
-                .values(phone_code_hash=None)
-            )
-            await db.commit()
+            from sqlalchemy.ext.asyncio import async_sessionmaker
+            from app.db.session import engine
+            async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+            async with async_session() as new_session:
+                await new_session.execute(
+                    update(TelegramAccount)
+                    .where(TelegramAccount.id == account_id)
+                    .values(phone_code_hash=None)
+                )
+                await new_session.commit()
+
             await self._handle_error(db, account_id, error_msg, "code_expired")
             raise ValueError(error_msg)
 
@@ -204,19 +239,25 @@ class TelegramClientManager:
             logger.warning(f"No client found for account {account_id}")
             return
 
-        result = await db.execute(
-            select(TelegramAccount).where(TelegramAccount.id == account_id)
-        )
-        account: TelegramAccount = result.scalar_one_or_none()
-        if not account:
-            logger.error(f"Account {account_id} not found in database")
-            return
+        # Create new session for database operation
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
 
-        whitelist = json.loads(account.whitelist_keywords or "[]")
-        blacklist = json.loads(account.blacklist_keywords or "[]")
-        channels = json.loads(account.monitored_channels or "[]")
-        forward_to = account.forward_to_chat_id
-        replacements = json.loads(account.replacements or "{}")
+        async with async_session() as new_session:
+            result = await new_session.execute(
+                select(TelegramAccount).where(TelegramAccount.id == account_id)
+            )
+            account: TelegramAccount = result.scalar_one_or_none()
+            if not account:
+                logger.error(f"Account {account_id} not found in database")
+                return
+
+            whitelist = json.loads(account.whitelist_keywords or "[]")
+            blacklist = json.loads(account.blacklist_keywords or "[]")
+            channels = json.loads(account.monitored_channels or "[]")
+            forward_to = account.forward_to_chat_id
+            replacements = json.loads(account.replacements or "{}")
 
         if not channels:
             logger.warning(f"No channels configured for account {account.phone_number}")
@@ -242,8 +283,15 @@ class TelegramClientManager:
 
         logger.info(f"Setting up monitoring for account {account.phone_number} on channels: {channel_filters}")
 
-        @client.on_message(filters.chat(channel_filters))
-        async def handle_message(client: Client, message: Message):
+        # Remove old handlers if any
+        if account_id in self.handlers:
+            try:
+                client.remove_handler(*self.handlers[account_id])
+            except:
+                pass
+
+        # Create handler
+        async def handle_message(client_instance: Client, message: Message):
             try:
                 text = message.text or message.caption or ""
                 if not text:
@@ -270,7 +318,7 @@ class TelegramClientManager:
                             modified_text = modified_text.replace(old_text, new_text)
 
                     if modified_text != text:
-                        await client.send_message(
+                        await client_instance.send_message(
                             chat_id=int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to,
                             text=modified_text
                         )
@@ -279,26 +327,51 @@ class TelegramClientManager:
                             chat_id=int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to
                         )
 
-                    await db.execute(
-                        update(TelegramAccount)
-                        .where(TelegramAccount.id == account_id)
-                        .values(last_activity=datetime.now(timezone.utc))
-                    )
-                    await db.commit()
+                    from sqlalchemy.ext.asyncio import async_sessionmaker
+                    from app.db.session import engine
+                    async_session_new = async_sessionmaker(engine, expire_on_commit=False)
+                    async with async_session_new() as session:
+                        await session.execute(
+                            update(TelegramAccount)
+                            .where(TelegramAccount.id == account_id)
+                            .values(last_activity=datetime.now(timezone.utc))
+                        )
+                        await session.commit()
 
                     logger.info(f"Message forwarded from account {account_id}")
 
             except Exception as e:
                 logger.error(f"Error handling message for account {account_id}: {e}")
-                await self._handle_error(db, account_id, f"Message forwarding error: {str(e)}", "forwarding_error")
+                from sqlalchemy.ext.asyncio import async_sessionmaker
+                from app.db.session import engine
+                async_session_new = async_sessionmaker(engine, expire_on_commit=False)
+                async with async_session_new() as error_session:
+                    await self._handle_error(error_session, account_id, f"Message forwarding error: {str(e)}",
+                                             "forwarding_error")
 
         try:
+            # Register handler
+            handler = MessageHandler(
+                callback=handle_message,
+                filters=filters.chat(channel_filters)
+            )
+            handler_group = client.add_handler(handler, group=account_id)
+
+            self.handlers[account_id] = (handler_group, account_id)
+
             if not client.is_connected:
                 await client.start()
 
-            account.is_active = True
-            account.error_message = None
-            await db.commit()
+            # Create new session for status update
+            async with async_session() as new_session:
+                result = await new_session.execute(
+                    select(TelegramAccount).where(TelegramAccount.id == account_id)
+                )
+                acc = result.scalar_one_or_none()
+                if acc:
+                    acc.is_active = True
+                    acc.error_message = None
+                    await new_session.commit()
 
             logger.info(f"Monitoring started for account {account.phone_number}")
 
@@ -308,11 +381,22 @@ class TelegramClientManager:
 
     async def stop_client(self, account_id: int, db: AsyncSession):
         """Stop a Telegram client"""
+        # Remove handler
+        if account_id in self.handlers:
+            try:
+                client = self.clients.get(account_id)
+                if client:
+                    client.remove_handler(*self.handlers[account_id])
+            except:
+                pass
+            self.handlers.pop(account_id, None)
+
         client = self.clients.pop(account_id, None)
 
         if client:
             try:
-                await client.stop()
+                if client.is_connected:
+                    await client.stop()
                 logger.info(f"Client stopped for account {account_id}")
             except Exception as e:
                 logger.error(f"Error stopping client {account_id}: {e}")
@@ -327,23 +411,41 @@ class TelegramClientManager:
         """Delete a Telegram client and its session"""
         await self.stop_client(account_id, db)
 
+        # Wait for client to fully stop
+        await asyncio.sleep(2)
+
         session_path = self._get_session_path(account_id)
         session_file = Path(f"{session_path}.session")
-        if session_file.exists():
+
+        # Try to delete session file with retries
+        for attempt in range(5):
             try:
-                session_file.unlink()
-                logger.info(f"Session file deleted for account {account_id}")
+                if session_file.exists():
+                    session_file.unlink()
+                    logger.info(f"Session file deleted for account {account_id}")
+                break
             except Exception as e:
-                logger.error(f"Error deleting session file: {e}")
+                if attempt < 4:
+                    logger.warning(f"Attempt {attempt + 1}/5: Could not delete session file, retrying...")
+                    await asyncio.sleep(1)
+                else:
+                    logger.error(f"Error deleting session file after 5 attempts: {e}")
 
     async def update_client_settings(self, account_id: int, db: AsyncSession):
         """Update monitoring settings for a running client"""
         await self.stop_client(account_id, db)
+        await asyncio.sleep(1)
 
-        result = await db.execute(
-            select(TelegramAccount).where(TelegramAccount.id == account_id)
-        )
-        account = result.scalar_one_or_none()
+        # Create new session for database operation
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+        async with async_session() as new_session:
+            result = await new_session.execute(
+                select(TelegramAccount).where(TelegramAccount.id == account_id)
+            )
+            account = result.scalar_one_or_none()
 
         if account and account.status != AccountStatus.STOPPED:
             try:
@@ -369,12 +471,18 @@ class TelegramClientManager:
         if is_active is not None:
             values["is_active"] = is_active
 
-        await db.execute(
-            update(TelegramAccount)
-            .where(TelegramAccount.id == account_id)
-            .values(**values)
-        )
-        await db.commit()
+        # Create new session for database operation
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+        async with async_session() as new_session:
+            await new_session.execute(
+                update(TelegramAccount)
+                .where(TelegramAccount.id == account_id)
+                .values(**values)
+            )
+            await new_session.commit()
 
     async def _handle_error(
             self,
@@ -388,12 +496,19 @@ class TelegramClientManager:
             db, account_id, AccountStatus.ERROR, error_message, is_active=False
         )
 
-        notification = AccountNotification(
-            account_id=account_id,
-            message=error_message,
-            error_type=error_type
-        )
-        db.add(notification)
+        # Create new session for notification
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+        async with async_session() as new_session:
+            notification = AccountNotification(
+                account_id=account_id,
+                message=error_message,
+                error_type=error_type
+            )
+            new_session.add(notification)
+            await new_session.commit()
 
         if settings.TELEGRAM_BOT_TOKEN and settings.ADMIN_TELEGRAM_CHAT_ID:
             try:
@@ -411,7 +526,6 @@ class TelegramClientManager:
             except Exception as e:
                 logger.error(f"Failed to send admin notification: {e}")
 
-        await db.commit()
         logger.error(f"Error handled for account {account_id}: {error_message}")
 
 

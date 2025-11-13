@@ -8,10 +8,13 @@ engine = create_async_engine(
     echo=settings.DEBUG,
     future=True,
     pool_pre_ping=True,
-    pool_size=5,  # Уменьшено для Celery
-    max_overflow=10,  # Уменьшено для Celery
-    pool_recycle=3600,  # Пересоздавать соединения каждый час
-    pool_timeout=30,  # Таймаут получения соединения из пула
+    pool_size=10,
+    max_overflow=20,
+    pool_recycle=3600,
+    pool_timeout=30,
+    connect_args={
+        "timeout": 30,
+    }
 )
 
 # Create async session maker
