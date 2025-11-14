@@ -224,7 +224,7 @@ class AccountService:
         if not account:
             raise ValueError("Account not found")
 
-        await telegram_manager.delete_client(account_id, db)
+        await telegram_manager.delete_client(account, account_id, db)
         await db.execute(delete(TelegramAccount).where(TelegramAccount.id == account_id))
         await db.commit()
 

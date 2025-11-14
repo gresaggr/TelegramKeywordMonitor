@@ -93,7 +93,7 @@ class TelegramClientManager:
             await self.stop_client(account.id, db)
             await asyncio.sleep(1)
 
-        session_path = self._get_session_path(account.id)
+        # session_path = self._get_session_path(account.id)
 
         proxy_dict = None
         if account.proxy_host and account.proxy_port:
@@ -402,9 +402,10 @@ class TelegramClientManager:
                 await client.connect()
 
             if not client.is_initialized:
-                await client.start()
+                # await client.start()
+                await client.initialize()
 
-            handler_group = client.add_handler(handler, group=account_id)
+            client.add_handler(handler, group=account_id)
             self.handlers[account_id] = (handler, account_id)
 
             async with async_session() as new_session:
@@ -455,7 +456,7 @@ class TelegramClientManager:
         await self._stop_client_internal(account_id)
         await self._update_account_status(db, account_id, AccountStatus.STOPPED, is_active=False)
 
-    async def delete_client(self, account_id: int, db: AsyncSession):
+    async def delete_client(self, account: TelegramAccount, account_id: int, db: AsyncSession):
         """Delete a Telegram client and its session"""
         await self.stop_client(account_id, db)
 
@@ -468,7 +469,7 @@ class TelegramClientManager:
             try:
                 if session_file.exists():
                     session_file.unlink()
-                    logger.info(f"Session file deleted for account {account_id}")
+                    logger.info(f"Session file deleted for account {account_id} [{account.phone_number}]")
                 break
             except Exception as e:
                 if attempt < 4:
@@ -566,7 +567,7 @@ class TelegramClientManager:
                     f"*Account ID:* {account_id}\n"
                     f"*Error Type:* {error_type}\n"
                     f"*Message:* {error_safe}\n"
-                    f"*Time:* {datetime.now(timezone.utc).strftime('%Y\\-%m\\-%d %H:%M:%S')} UTC"
+                    f"*Time:* {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
                 )
                 await send_telegram_notification(settings.ADMIN_TELEGRAM_CHAT_ID, admin_message)
             except Exception as e:
