@@ -66,6 +66,20 @@ class TelegramClientManager:
         except Exception as e:
             logger.error(f"Error during startup account restore: {e}")
 
+    async def shutdown_all_accounts(self):
+        """Stop all active accounts on shutdown"""
+        logger.info("Shutting down all Telegram accounts...")
+
+        account_ids = list(self.clients.keys())
+        for account_id in account_ids:
+            try:
+                logger.info(f"Stopping account {account_id}")
+                await self._stop_client_internal(account_id)
+            except Exception as e:
+                logger.error(f"Error stopping account {account_id} during shutdown: {e}")
+
+        logger.info("All accounts stopped")
+
     async def create_client(
             self,
             account: TelegramAccount,
@@ -385,6 +399,9 @@ class TelegramClientManager:
             )
 
             if not client.is_connected:
+                await client.connect()
+
+            if not client.is_initialized:
                 await client.start()
 
             handler_group = client.add_handler(handler, group=account_id)
@@ -400,14 +417,14 @@ class TelegramClientManager:
                     acc.error_message = None
                     await new_session.commit()
 
-            logger.info(f"Monitoring started for account {account.phone_number}")
+            logger.info(f"Monitoring started successfully for account {account.phone_number}")
 
         except Exception as e:
             logger.error(f"Error starting monitoring for account {account_id}: {e}")
             await self._handle_error(db, account_id, f"Error starting monitoring: {str(e)}", "monitoring_error")
 
-    async def stop_client(self, account_id: int, db: AsyncSession):
-        """Stop a Telegram client"""
+    async def _stop_client_internal(self, account_id: int):
+        """Internal method to stop client without database operations"""
         if account_id in self.handlers:
             try:
                 client = self.clients.get(account_id)
@@ -426,8 +443,6 @@ class TelegramClientManager:
                 if client.is_connected:
                     await client.stop()
                     logger.info(f"Client stopped for account {account_id}")
-                else:
-                    logger.info(f"Client already disconnected for account {account_id}")
             except Exception as e:
                 logger.warning(f"Error stopping client {account_id}: {e}")
 
@@ -435,6 +450,9 @@ class TelegramClientManager:
         if task and not task.done():
             task.cancel()
 
+    async def stop_client(self, account_id: int, db: AsyncSession):
+        """Stop a Telegram client"""
+        await self._stop_client_internal(account_id)
         await self._update_account_status(db, account_id, AccountStatus.STOPPED, is_active=False)
 
     async def delete_client(self, account_id: int, db: AsyncSession):
@@ -538,18 +556,17 @@ class TelegramClientManager:
         if settings.TELEGRAM_BOT_TOKEN and settings.ADMIN_TELEGRAM_CHAT_ID:
             try:
                 from app.services.telegram import send_telegram_notification
-                error_safe = (error_message
-                              .replace('\\', '\\\\')
-                              .replace('*', '\\*')
-                              .replace('_', '\\_')
-                              .replace('[', '\\[')
-                              .replace('`', '\\`'))
+                error_safe = error_message.replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace(']',
+                                                                                                               '\\]').replace(
+                    '(', '\\(').replace(')', '\\)').replace('~', '\\~').replace('`', '\\`').replace('>', '\\>').replace(
+                    '#', '\\#').replace('+', '\\+').replace('-', '\\-').replace('=', '\\=').replace('|', '\\|').replace(
+                    '{', '\\{').replace('}', '\\}').replace('.', '\\.').replace('!', '\\!')
                 admin_message = (
                     f"⚠️ *Telegram Account Error*\n\n"
                     f"*Account ID:* {account_id}\n"
                     f"*Error Type:* {error_type}\n"
                     f"*Message:* {error_safe}\n"
-                    f"*Time:* {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
+                    f"*Time:* {datetime.now(timezone.utc).strftime('%Y\\-%m\\-%d %H:%M:%S')} UTC"
                 )
                 await send_telegram_notification(settings.ADMIN_TELEGRAM_CHAT_ID, admin_message)
             except Exception as e:

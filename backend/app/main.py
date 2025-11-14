@@ -30,8 +30,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # Shutdown all accounts
     logger.info("=" * 60)
     logger.info("🛑 Application shutting down...")
+    await telegram_manager.shutdown_all_accounts()
     logger.info("=" * 60)
 
 
