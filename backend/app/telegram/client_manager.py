@@ -25,7 +25,7 @@ class TelegramClientManager:
         self.clients: Dict[int, Client] = {}
         self.pending_auth: Dict[int, Client] = {}
         self.running_tasks: Dict[int, asyncio.Task] = {}
-        self.handlers: Dict[int, int] = {}
+        self.handlers: Dict[int, Tuple] = {}
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
@@ -314,9 +314,11 @@ class TelegramClientManager:
 
         if account_id in self.handlers:
             try:
-                client.remove_handler(*self.handlers[account_id])
-            except:
-                pass
+                handler_tuple = self.handlers[account_id]
+                client.remove_handler(handler_tuple[0], handler_tuple[1])
+                logger.info(f"Removed old handler for account {account_id}")
+            except Exception as e:
+                logger.warning(f"Could not remove old handler for account {account_id}: {e}")
 
         async def handle_message(client_instance: Client, message: Message):
             try:
@@ -386,7 +388,7 @@ class TelegramClientManager:
                 await client.start()
 
             handler_group = client.add_handler(handler, group=account_id)
-            self.handlers[account_id] = (handler_group, account_id)
+            self.handlers[account_id] = (handler, account_id)
 
             async with async_session() as new_session:
                 result = await new_session.execute(
@@ -410,9 +412,11 @@ class TelegramClientManager:
             try:
                 client = self.clients.get(account_id)
                 if client:
-                    client.remove_handler(*self.handlers[account_id])
-            except:
-                pass
+                    handler_tuple = self.handlers[account_id]
+                    client.remove_handler(handler_tuple[0], handler_tuple[1])
+                    logger.info(f"Handler removed for account {account_id}")
+            except Exception as e:
+                logger.warning(f"Could not remove handler for account {account_id}: {e}")
             self.handlers.pop(account_id, None)
 
         client = self.clients.pop(account_id, None)
@@ -421,9 +425,11 @@ class TelegramClientManager:
             try:
                 if client.is_connected:
                     await client.stop()
-                logger.info(f"Client stopped for account {account_id}")
+                    logger.info(f"Client stopped for account {account_id}")
+                else:
+                    logger.info(f"Client already disconnected for account {account_id}")
             except Exception as e:
-                logger.error(f"Error stopping client {account_id}: {e}")
+                logger.warning(f"Error stopping client {account_id}: {e}")
 
         task = self.running_tasks.pop(account_id, None)
         if task and not task.done():
@@ -532,8 +538,12 @@ class TelegramClientManager:
         if settings.TELEGRAM_BOT_TOKEN and settings.ADMIN_TELEGRAM_CHAT_ID:
             try:
                 from app.services.telegram import send_telegram_notification
-                error_safe = error_message.replace('*', '\\*').replace('_', '\\_').replace('[', '\\[').replace('`',
-                                                                                                               '\\`')
+                error_safe = (error_message
+                              .replace('\\', '\\\\')
+                              .replace('*', '\\*')
+                              .replace('_', '\\_')
+                              .replace('[', '\\[')
+                              .replace('`', '\\`'))
                 admin_message = (
                     f"⚠️ *Telegram Account Error*\n\n"
                     f"*Account ID:* {account_id}\n"

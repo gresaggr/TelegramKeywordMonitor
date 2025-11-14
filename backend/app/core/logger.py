@@ -13,12 +13,17 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 # Create formatters
 formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
 
-# Console handler
+# Console handler with UTF-8 encoding
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(formatter)
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except:
+        pass
 
-# File handler
-file_handler = logging.FileHandler("logs/app.log")
+# File handler with UTF-8 encoding
+file_handler = logging.FileHandler("logs/app.log", encoding='utf-8')
 file_handler.setFormatter(formatter)
 
 # Configure root logger

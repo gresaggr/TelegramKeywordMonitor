@@ -19,9 +19,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"📮 Redis: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
     logger.info(f"📁 Sessions: {settings.SESSIONS_DIR}")
     if settings.TELEGRAM_BOT_TOKEN:
-        logger.info(f"🔔 Telegram Bot: ✓ Configured")
+        logger.info("🔔 Telegram Bot: ✓ Configured")
     else:
-        logger.info(f"🔔 Telegram Bot: ✗ Not configured")
+        logger.info("🔔 Telegram Bot: ✗ Not configured")
     logger.info("=" * 60)
 
     # Restore active accounts
