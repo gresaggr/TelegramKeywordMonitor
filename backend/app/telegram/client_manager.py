@@ -26,6 +26,7 @@ class TelegramClientManager:
         self.pending_auth: Dict[int, Client] = {}
         self.running_tasks: Dict[int, asyncio.Task] = {}
         self.handlers: Dict[int, Tuple] = {}
+        self.health_check_task: Optional[asyncio.Task] = None
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
@@ -63,20 +64,75 @@ class TelegramClientManager:
                     logger.error(f"Failed to restore account {account.id}: {e}")
                     await self._handle_error(db, account.id, f"Startup restore failed: {str(e)}", "startup_error")
 
+            # Start health check
+            self.health_check_task = asyncio.create_task(self._health_check_loop())
+
         except Exception as e:
             logger.error(f"Error during startup account restore: {e}")
+
+    async def _health_check_loop(self):
+        """Periodically check account health"""
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+
+        while True:
+            try:
+                await asyncio.sleep(10)
+
+                async_session = async_sessionmaker(engine, expire_on_commit=False)
+                async with async_session() as db:
+                    result = await db.execute(
+                        select(TelegramAccount).where(
+                            TelegramAccount.is_active == True
+                        )
+                    )
+                    active_accounts = result.scalars().all()
+
+                    for account in active_accounts:
+                        client = self.clients.get(account.id)
+
+                        if not client or not client.is_connected:
+                            logger.warning(f"Account {account.id} is not connected, marking as inactive")
+                            await self._update_account_status(
+                                db, account.id, AccountStatus.STOPPED, is_active=False
+                            )
+
+            except Exception as e:
+                logger.error(f"Error in health check loop: {e}")
 
     async def shutdown_all_accounts(self):
         """Stop all active accounts on shutdown"""
         logger.info("Shutting down all Telegram accounts...")
 
-        account_ids = list(self.clients.keys())
-        for account_id in account_ids:
+        if self.health_check_task and not self.health_check_task.done():
+            self.health_check_task.cancel()
             try:
-                logger.info(f"Stopping account {account_id}")
-                await self._stop_client_internal(account_id)
-            except Exception as e:
-                logger.error(f"Error stopping account {account_id} during shutdown: {e}")
+                await self.health_check_task
+            except asyncio.CancelledError:
+                pass
+
+        # Get all accounts from clients and database
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
+        async with async_session() as db:
+            result = await db.execute(
+                select(TelegramAccount).where(
+                    TelegramAccount.is_active == True
+                )
+            )
+            db_accounts = result.scalars().all()
+
+            all_account_ids = set(self.clients.keys())
+            all_account_ids.update(acc.id for acc in db_accounts)
+
+            for account_id in all_account_ids:
+                try:
+                    logger.info(f"Stopping account {account_id}")
+                    await self._stop_client_internal(account_id)
+                except Exception as e:
+                    logger.error(f"Error stopping account {account_id} during shutdown: {e}")
 
         logger.info("All accounts stopped")
 
@@ -92,8 +148,6 @@ class TelegramClientManager:
         if account.id in self.clients:
             await self.stop_client(account.id, db)
             await asyncio.sleep(1)
-
-        # session_path = self._get_session_path(account.id)
 
         proxy_dict = None
         if account.proxy_host and account.proxy_port:
@@ -362,13 +416,11 @@ class TelegramClientManager:
 
                     forward_chat_id = int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to
 
-                    if modified_text != text:
-                        await client_instance.send_message(
-                            chat_id=forward_chat_id,
-                            text=modified_text
-                        )
-                    else:
-                        await message.forward(chat_id=forward_chat_id)
+                    # Always send as new message (not forward)
+                    await client_instance.send_message(
+                        chat_id=forward_chat_id,
+                        text=modified_text
+                    )
 
                     from sqlalchemy.ext.asyncio import async_sessionmaker
                     from app.db.session import engine
@@ -381,7 +433,7 @@ class TelegramClientManager:
                         )
                         await session.commit()
 
-                    logger.info(f"Message forwarded from account {account_id}")
+                    logger.info(f"Message sent from account {account_id}")
 
             except Exception as e:
                 logger.error(f"Error handling message for account {account_id}: {e}")
@@ -402,7 +454,6 @@ class TelegramClientManager:
                 await client.connect()
 
             if not client.is_initialized:
-                # await client.start()
                 await client.initialize()
 
             client.add_handler(handler, group=account_id)
