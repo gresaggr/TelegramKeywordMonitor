@@ -11,6 +11,45 @@ class ProxySettings(BaseModel):
     password: Optional[str] = None
 
 
+class MonitoringTaskBase(BaseModel):
+    name: str
+    whitelist_keywords: List[str] = Field(default_factory=list)
+    blacklist_keywords: List[str] = Field(default_factory=list)
+    monitored_channels: List[str] = Field(default_factory=list)
+    forward_to_chat_id: str
+    replacements: Dict[str, str] = Field(default_factory=dict)
+
+
+class MonitoringTaskCreate(MonitoringTaskBase):
+    pass
+
+
+class MonitoringTaskUpdate(BaseModel):
+    name: Optional[str] = None
+    whitelist_keywords: Optional[List[str]] = None
+    blacklist_keywords: Optional[List[str]] = None
+    monitored_channels: Optional[List[str]] = None
+    forward_to_chat_id: Optional[str] = None
+    replacements: Optional[Dict[str, str]] = None
+    is_active: Optional[bool] = None
+
+
+class MonitoringTaskResponse(BaseModel):
+    id: int
+    account_id: int
+    name: str
+    whitelist_keywords: List[str]
+    blacklist_keywords: List[str]
+    monitored_channels: List[str]
+    forward_to_chat_id: str
+    replacements: Dict[str, str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class TelegramAccountBase(BaseModel):
     phone_number: str
     api_id: str
@@ -19,23 +58,10 @@ class TelegramAccountBase(BaseModel):
     system_version: Optional[str] = "Linux"
     app_version: Optional[str] = "1.0.0"
     proxy: Optional[ProxySettings] = None
-    whitelist_keywords: List[str] = Field(default_factory=list)
-    blacklist_keywords: List[str] = Field(default_factory=list)
-    monitored_channels: List[str] = Field(default_factory=list)
-    forward_to_chat_id: Optional[str] = None
-    replacements: Dict[str, str] = Field(default_factory=dict)
 
 
 class TelegramAccountCreate(TelegramAccountBase):
     pass
-
-
-class TelegramAccountUpdate(BaseModel):
-    whitelist_keywords: Optional[List[str]] = None
-    blacklist_keywords: Optional[List[str]] = None
-    monitored_channels: Optional[List[str]] = None
-    forward_to_chat_id: Optional[str] = None
-    replacements: Optional[Dict[str, str]] = None
 
 
 class AccountNotificationResponse(BaseModel):
@@ -54,15 +80,11 @@ class TelegramAccountResponse(BaseModel):
     phone_number: str
     status: AccountStatus
     is_active: bool
-    whitelist_keywords: List[str]
-    blacklist_keywords: List[str]
-    monitored_channels: List[str]
-    forward_to_chat_id: Optional[str]
-    replacements: Dict[str, str]
     error_message: Optional[str]
     unread_notifications_count: int = 0
     created_at: datetime
     last_activity: Optional[datetime]
+    monitoring_tasks: List[MonitoringTaskResponse] = []
 
     class Config:
         from_attributes = True
@@ -72,11 +94,3 @@ class VerifyCodeRequest(BaseModel):
     account_id: int
     code: str
     two_fa_password: Optional[str] = None
-
-
-class StartAccountRequest(BaseModel):
-    account_id: int
-
-
-class StopAccountRequest(BaseModel):
-    account_id: int

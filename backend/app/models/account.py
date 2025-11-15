@@ -24,7 +24,7 @@ class TelegramAccount(Base):
     phone_number = Column(String, nullable=False)
     api_id = Column(String, nullable=False)
     api_hash = Column(String, nullable=False)
-    phone_code_hash = Column(String, nullable=True)  # NEW: Store phone_code_hash for verification
+    phone_code_hash = Column(String, nullable=True)
 
     # Device info
     device_model = Column(String, nullable=True)
@@ -36,13 +36,6 @@ class TelegramAccount(Base):
     proxy_port = Column(Integer, nullable=True)
     proxy_username = Column(String, nullable=True)
     proxy_password = Column(String, nullable=True)
-
-    # Monitoring settings
-    whitelist_keywords = Column(Text, nullable=True)  # JSON array
-    blacklist_keywords = Column(Text, nullable=True)  # JSON array
-    monitored_channels = Column(Text, nullable=True)  # JSON array of channel IDs/usernames
-    forward_to_chat_id = Column(String, nullable=True)  # Where to forward messages
-    replacements = Column(Text, nullable=True)  # JSON object: {"old": "new"}
 
     # Status
     status = Column(String, default=AccountStatus.INITIALIZING)
@@ -56,21 +49,41 @@ class TelegramAccount(Base):
 
     # Relationships
     user = relationship("User", back_populates="telegram_accounts")
+    monitoring_tasks = relationship("MonitoringTask", back_populates="account", cascade="all, delete-orphan")
     notifications = relationship("AccountNotification", back_populates="account", cascade="all, delete-orphan")
 
 
+class MonitoringTask(Base):
+    __tablename__ = "monitoring_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("telegram_accounts.id", ondelete="CASCADE"), nullable=False)
+
+    name = Column(String, nullable=False)
+    whitelist_keywords = Column(Text, nullable=True)
+    blacklist_keywords = Column(Text, nullable=True)
+    monitored_channels = Column(Text, nullable=False)
+    forward_to_chat_id = Column(String, nullable=False)
+    replacements = Column(Text, nullable=True)
+
+    is_active = Column(Boolean, default=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    account = relationship("TelegramAccount", back_populates="monitoring_tasks")
+
+
 class AccountNotification(Base):
-    """Notifications for account errors"""
     __tablename__ = "account_notifications"
 
     id = Column(Integer, primary_key=True, index=True)
     account_id = Column(Integer, ForeignKey("telegram_accounts.id", ondelete="CASCADE"), nullable=False)
 
     message = Column(Text, nullable=False)
-    error_type = Column(String, nullable=True)  # auth_error, network_error, forwarding_error, etc.
+    error_type = Column(String, nullable=True)
     is_read = Column(Boolean, default=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
     account = relationship("TelegramAccount", back_populates="notifications")

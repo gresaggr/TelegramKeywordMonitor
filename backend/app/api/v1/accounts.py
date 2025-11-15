@@ -1,4 +1,3 @@
-# backend/app/api/v1/accounts.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -7,10 +6,12 @@ from app.db.session import get_async_session
 from app.models.user import User
 from app.schemas.account import (
     TelegramAccountCreate,
-    TelegramAccountUpdate,
     TelegramAccountResponse,
     VerifyCodeRequest,
-    AccountNotificationResponse
+    AccountNotificationResponse,
+    MonitoringTaskCreate,
+    MonitoringTaskUpdate,
+    MonitoringTaskResponse
 )
 from app.api.deps import get_current_user
 from app.services.account_service import AccountService
@@ -28,9 +29,8 @@ async def create_account(
         current_user: User = Depends(get_current_user),
         db: AsyncSession = Depends(get_async_session)
 ):
-    """Create a new Telegram account and start authentication"""
+    """Create a new Telegram account"""
     try:
-        # Check account limit
         result = await db.execute(
             select(func.count(TelegramAccount.id)).where(TelegramAccount.user_id == current_user.id)
         )
@@ -39,14 +39,7 @@ async def create_account(
         if account_count >= 5:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum number of accounts (5) reached. Please delete an existing account to add a new one."
-            )
-
-        # Validate channel limit
-        if len(account_data.monitored_channels) > 5:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum number of monitored channels is 5"
+                detail="Maximum number of accounts (5) reached."
             )
 
         account = await AccountService.create_account(account_data, current_user, db)
@@ -103,29 +96,6 @@ async def get_account(
         return await AccountService.get_account(account_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
-
-@router.patch("/{account_id}", response_model=TelegramAccountResponse)
-async def update_account(
-        account_id: int,
-        account_data: TelegramAccountUpdate,
-        current_user: User = Depends(get_current_user),
-        db: AsyncSession = Depends(get_async_session)
-):
-    """Update Telegram account monitoring settings"""
-    try:
-        # Validate channel limit
-        if account_data.monitored_channels is not None and len(account_data.monitored_channels) > 5:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum number of monitored channels is 5"
-            )
-
-        return await AccountService.update_account(account_id, account_data, current_user, db)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except HTTPException:
-        raise
 
 
 @router.post("/{account_id}/start", response_model=TelegramAccountResponse)
@@ -194,5 +164,60 @@ async def mark_notification_read(
     try:
         await AccountService.mark_notification_read(account_id, notification_id, current_user, db)
         return {"status": "ok"}
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/{account_id}/tasks", response_model=MonitoringTaskResponse, status_code=status.HTTP_201_CREATED)
+async def create_monitoring_task(
+        account_id: int,
+        task_data: MonitoringTaskCreate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
+):
+    """Create a new monitoring task for an account"""
+    try:
+        if len(task_data.monitored_channels) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum number of monitored channels is 5"
+            )
+
+        return await AccountService.create_monitoring_task(account_id, task_data, current_user, db)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.patch("/{account_id}/tasks/{task_id}", response_model=MonitoringTaskResponse)
+async def update_monitoring_task(
+        account_id: int,
+        task_id: int,
+        task_data: MonitoringTaskUpdate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
+):
+    """Update a monitoring task"""
+    try:
+        if task_data.monitored_channels is not None and len(task_data.monitored_channels) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum number of monitored channels is 5"
+            )
+
+        return await AccountService.update_monitoring_task(account_id, task_id, task_data, current_user, db)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete("/{account_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_monitoring_task(
+        account_id: int,
+        task_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
+):
+    """Delete a monitoring task"""
+    try:
+        await AccountService.delete_monitoring_task(account_id, task_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

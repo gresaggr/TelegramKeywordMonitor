@@ -11,7 +11,7 @@ from pyrogram.types import Message
 
 from app.core.config import settings
 from app.core.logger import get_logger
-from app.models.account import TelegramAccount, AccountStatus, AccountNotification, MonitoringTask
+from app.models.account import TelegramAccount, AccountStatus, AccountNotification
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
@@ -25,7 +25,7 @@ class TelegramClientManager:
         self.clients: Dict[int, Client] = {}
         self.pending_auth: Dict[int, Client] = {}
         self.running_tasks: Dict[int, asyncio.Task] = {}
-        self.handlers: Dict[int, list] = {}
+        self.handlers: Dict[int, Tuple] = {}
         self.health_check_task: Optional[asyncio.Task] = None
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
@@ -53,7 +53,7 @@ class TelegramClientManager:
                     client, needs_auth = await self.create_client(account, db)
 
                     if not needs_auth:
-                        await self.start_monitoring(account.id, db)
+                        await self._start_monitoring(account.id, db)
                         logger.info(f"Account {account.id} [{account.phone_number}] restored successfully")
                     else:
                         logger.warning(f"Account {account.id} needs re-authentication")
@@ -64,6 +64,7 @@ class TelegramClientManager:
                     logger.error(f"Failed to restore account {account.id}: {e}")
                     await self._handle_error(db, account.id, f"Startup restore failed: {str(e)}", "startup_error")
 
+            # Start health check
             self.health_check_task = asyncio.create_task(self._health_check_loop())
 
         except Exception as e:
@@ -110,6 +111,7 @@ class TelegramClientManager:
             except asyncio.CancelledError:
                 pass
 
+        # Get all accounts from clients and database
         from sqlalchemy.ext.asyncio import async_sessionmaker
         from app.db.session import engine
 
@@ -262,6 +264,7 @@ class TelegramClientManager:
                 await new_session.commit()
 
             await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
+            await self._start_monitoring(account_id, db)
 
             logger.info(f"Account {account_id} [{account.phone_number}] successfully authorized")
             return True
@@ -289,8 +292,9 @@ class TelegramClientManager:
                     await new_session.commit()
 
                 await self._update_account_status(db, account_id, AccountStatus.ACTIVE)
+                await self._start_monitoring(account_id, db)
 
-                logger.info(f"Account {account_id} authorized with 2FA")
+                logger.info(f"Account {account_id} [{account.phone_number}] authorized with 2FA")
                 return True
 
             except Exception as e:
@@ -326,7 +330,7 @@ class TelegramClientManager:
             await self._handle_error(db, account_id, error_msg, "verification_error")
             raise
 
-    async def start_monitoring(self, account_id: int, db: AsyncSession):
+    async def _start_monitoring(self, account_id: int, db: AsyncSession):
         """Start message monitoring for an account"""
         client = self.clients.get(account_id)
         if not client:
@@ -346,43 +350,43 @@ class TelegramClientManager:
                 logger.error(f"Account {account_id} not found in database")
                 return
 
-            result = await new_session.execute(
-                select(MonitoringTask).where(
-                    MonitoringTask.account_id == account_id,
-                    MonitoringTask.is_active == True
-                )
-            )
-            tasks = result.scalars().all()
+            whitelist = json.loads(account.whitelist_keywords or "[]")
+            blacklist = json.loads(account.blacklist_keywords or "[]")
+            channels = json.loads(account.monitored_channels or "[]")
+            forward_to = account.forward_to_chat_id
+            replacements = json.loads(account.replacements or "{}")
 
-        if not tasks:
-            logger.warning(f"No active monitoring tasks for account {account.phone_number}")
+        if not channels:
+            logger.warning(f"No channels configured for account {account.phone_number}")
             return
 
-        if account_id in self.handlers:
-            for handler_tuple in self.handlers[account_id]:
-                try:
-                    client.remove_handler(handler_tuple[0], handler_tuple[1])
-                except Exception as e:
-                    logger.warning(f"Could not remove old handler: {e}")
-            self.handlers[account_id] = []
+        if not forward_to:
+            logger.warning(f"No forward destination configured for account {account.phone_number}")
+            return
 
-        all_channels = set()
-        for task in tasks:
-            channels = json.loads(task.monitored_channels or "[]")
-            for ch in channels:
-                try:
-                    if ch.lstrip('-').isdigit():
-                        all_channels.add(int(ch))
-                    else:
-                        all_channels.add(ch)
-                except:
-                    logger.warning(f"Invalid channel identifier: {ch}")
+        channel_filters = []
+        for ch in channels:
+            try:
+                if ch.lstrip('-').isdigit():
+                    channel_filters.append(int(ch))
+                else:
+                    channel_filters.append(ch)
+            except:
+                logger.warning(f"Invalid channel identifier: {ch}")
 
-        if not all_channels:
+        if not channel_filters:
             logger.error(f"No valid channels for account {account.phone_number}")
             return
 
-        logger.info(f"Setting up monitoring for account {account.phone_number} on channels: {all_channels}")
+        logger.info(f"Setting up monitoring for account {account.phone_number} on channels: {channel_filters}")
+
+        if account_id in self.handlers:
+            try:
+                handler_tuple = self.handlers[account_id]
+                client.remove_handler(handler_tuple[0], handler_tuple[1])
+                logger.info(f"Removed old handler for account {account_id}")
+            except Exception as e:
+                logger.warning(f"Could not remove old handler for account {account_id}: {e}")
 
         async def handle_message(client_instance: Client, message: Message):
             try:
@@ -392,75 +396,44 @@ class TelegramClientManager:
 
                 text_lower = text.lower()
 
-                from sqlalchemy.ext.asyncio import async_sessionmaker
-                from app.db.session import engine
-                async_session_new = async_sessionmaker(engine, expire_on_commit=False)
-
-                async with async_session_new() as session:
-                    result = await session.execute(
-                        select(MonitoringTask).where(
-                            MonitoringTask.account_id == account_id,
-                            MonitoringTask.is_active == True
-                        )
+                has_whitelist_match = True
+                if whitelist:
+                    has_whitelist_match = any(
+                        keyword.lower() in text_lower for keyword in whitelist
                     )
-                    active_tasks = result.scalars().all()
 
-                    for task in active_tasks:
-                        channels = json.loads(task.monitored_channels or "[]")
+                has_blacklist_match = False
+                if blacklist:
+                    has_blacklist_match = any(
+                        keyword.lower() in text_lower for keyword in blacklist
+                    )
 
-                        channel_match = False
-                        for ch in channels:
-                            if ch.lstrip('-').isdigit():
-                                if message.chat.id == int(ch):
-                                    channel_match = True
-                                    break
-                            else:
-                                if message.chat.username and message.chat.username.lower() == ch.lstrip('@').lower():
-                                    channel_match = True
-                                    break
+                if has_whitelist_match and not has_blacklist_match:
+                    modified_text = text
+                    if replacements:
+                        for old_text, new_text in replacements.items():
+                            modified_text = modified_text.replace(old_text, new_text)
 
-                        if not channel_match:
-                            continue
+                    forward_chat_id = int(forward_to) if forward_to.lstrip('-').isdigit() else forward_to
 
-                        whitelist = json.loads(task.whitelist_keywords or "[]")
-                        blacklist = json.loads(task.blacklist_keywords or "[]")
-                        replacements = json.loads(task.replacements or "{}")
+                    # Always send as new message (not forward)
+                    await client_instance.send_message(
+                        chat_id=forward_chat_id,
+                        text=modified_text
+                    )
 
-                        has_whitelist_match = True
-                        if whitelist:
-                            has_whitelist_match = any(
-                                keyword.lower() in text_lower for keyword in whitelist
-                            )
+                    from sqlalchemy.ext.asyncio import async_sessionmaker
+                    from app.db.session import engine
+                    async_session_new = async_sessionmaker(engine, expire_on_commit=False)
+                    async with async_session_new() as session:
+                        await session.execute(
+                            update(TelegramAccount)
+                            .where(TelegramAccount.id == account_id)
+                            .values(last_activity=datetime.now(timezone.utc))
+                        )
+                        await session.commit()
 
-                        has_blacklist_match = False
-                        if blacklist:
-                            has_blacklist_match = any(
-                                keyword.lower() in text_lower for keyword in blacklist
-                            )
-
-                        if has_whitelist_match and not has_blacklist_match:
-                            modified_text = text
-                            if replacements:
-                                for old_text, new_text in replacements.items():
-                                    modified_text = modified_text.replace(old_text, new_text)
-
-                            forward_chat_id = int(task.forward_to_chat_id) if task.forward_to_chat_id.lstrip(
-                                '-').isdigit() else task.forward_to_chat_id
-
-                            await client_instance.send_message(
-                                chat_id=forward_chat_id,
-                                text=modified_text
-                            )
-
-                            await session.execute(
-                                update(TelegramAccount)
-                                .where(TelegramAccount.id == account_id)
-                                .values(last_activity=datetime.now(timezone.utc))
-                            )
-                            await session.commit()
-
-                            logger.info(f"Message sent from account {account_id} (task: {task.name})")
-                            break
+                    logger.info(f"Message sent from account {account_id}")
 
             except Exception as e:
                 logger.error(f"Error handling message for account {account_id}: {e}")
@@ -474,7 +447,7 @@ class TelegramClientManager:
         try:
             handler = MessageHandler(
                 callback=handle_message,
-                filters=filters.chat(list(all_channels))
+                filters=filters.chat(channel_filters)
             )
 
             if not client.is_connected:
@@ -484,10 +457,7 @@ class TelegramClientManager:
                 await client.initialize()
 
             client.add_handler(handler, group=account_id)
-
-            if account_id not in self.handlers:
-                self.handlers[account_id] = []
-            self.handlers[account_id].append((handler, account_id))
+            self.handlers[account_id] = (handler, account_id)
 
             async with async_session() as new_session:
                 result = await new_session.execute(
@@ -505,32 +475,17 @@ class TelegramClientManager:
             logger.error(f"Error starting monitoring for account {account_id}: {e}")
             await self._handle_error(db, account_id, f"Error starting monitoring: {str(e)}", "monitoring_error")
 
-    async def update_monitoring(self, account_id: int, db: AsyncSession):
-        """Update monitoring settings for a running client"""
-        client = self.clients.get(account_id)
-        if not client:
-            return
-
-        if account_id in self.handlers:
-            for handler_tuple in self.handlers[account_id]:
-                try:
-                    client.remove_handler(handler_tuple[0], handler_tuple[1])
-                except Exception as e:
-                    logger.warning(f"Could not remove handler: {e}")
-            self.handlers[account_id] = []
-
-        await self.start_monitoring(account_id, db)
-
     async def _stop_client_internal(self, account_id: int):
         """Internal method to stop client without database operations"""
         if account_id in self.handlers:
-            client = self.clients.get(account_id)
-            if client:
-                for handler_tuple in self.handlers[account_id]:
-                    try:
-                        client.remove_handler(handler_tuple[0], handler_tuple[1])
-                    except Exception as e:
-                        logger.warning(f"Could not remove handler: {e}")
+            try:
+                client = self.clients.get(account_id)
+                if client:
+                    handler_tuple = self.handlers[account_id]
+                    client.remove_handler(handler_tuple[0], handler_tuple[1])
+                    logger.info(f"Handler removed for account {account_id}")
+            except Exception as e:
+                logger.warning(f"Could not remove handler for account {account_id}: {e}")
             self.handlers.pop(account_id, None)
 
         client = self.clients.pop(account_id, None)
@@ -573,6 +528,30 @@ class TelegramClientManager:
                     await asyncio.sleep(1)
                 else:
                     logger.error(f"Error deleting session file after 5 attempts: {e}")
+
+    async def update_client_settings(self, account_id: int, db: AsyncSession):
+        """Update monitoring settings for a running client"""
+        await self.stop_client(account_id, db)
+        await asyncio.sleep(1)
+
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+        from app.db.session import engine
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
+
+        async with async_session() as new_session:
+            result = await new_session.execute(
+                select(TelegramAccount).where(TelegramAccount.id == account_id)
+            )
+            account = result.scalar_one_or_none()
+
+        if account and account.status != AccountStatus.STOPPED:
+            try:
+                client, needs_auth = await self.create_client(account, db)
+                if not needs_auth:
+                    await self._start_monitoring(account_id, db)
+            except Exception as e:
+                logger.error(f"Error updating client {account_id}: {e}")
+                await self._handle_error(db, account_id, f"Error updating: {str(e)}", "update_error")
 
     async def _update_account_status(
             self,
