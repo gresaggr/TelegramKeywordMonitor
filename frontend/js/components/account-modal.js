@@ -1,3 +1,4 @@
+// frontend/js/components/account-modal.js
 const AccountModalComponent = {
     template: `
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
@@ -134,7 +135,7 @@ const AccountModalComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Monitored Channels *</label>
+                    <label class="form-label">Monitored Channels * (max 5)</label>
                     <textarea
                         v-model="channelsInput"
                         class="form-textarea"
@@ -145,7 +146,7 @@ Example:
                         rows="4"
                         required
                     ></textarea>
-                    <small style="color: #718096; font-size: 12px;">Channel IDs (numeric) or usernames (@username)</small>
+                    <small style="color: #718096; font-size: 12px;">Channel IDs (numeric) or usernames (@username). Maximum 5 channels.</small>
                 </div>
 
                 <div class="form-group">
@@ -292,6 +293,11 @@ bad_word -> ***"
 
             if (this.form.monitored_channels.length === 0) {
                 this.error = 'Please add at least one channel to monitor';
+                return;
+            }
+
+            if (this.form.monitored_channels.length > 5) {
+                this.error = 'Maximum number of monitored channels is 5';
                 return;
             }
 

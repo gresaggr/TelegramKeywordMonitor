@@ -1,3 +1,4 @@
+// frontend/js/components/profile-modal.js
 const ProfileModalComponent = {
     template: `
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
@@ -54,7 +55,7 @@ const ProfileModalComponent = {
                 <h3 style="margin: 30px 0 15px; color: #1a202c;">Telegram Settings</h3>
 
                 <div class="form-group">
-                    <label class="form-label">Default Telegram Chat ID</label>
+                    <label class="form-label">Default Telegram Chat ID (for error notifications)</label>
                     <input
                         v-model="form.default_telegram_chat_id"
                         type="text"
@@ -62,6 +63,7 @@ const ProfileModalComponent = {
                         placeholder="123456789 or leave empty"
                     >
                     <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
+                        Channel where system error notifications will be sent.
                         <a href="#" @click.prevent="showTelegramHelp = !showTelegramHelp" style="color: #667eea;">
                             How to get Chat ID?
                         </a>
@@ -196,7 +198,7 @@ const ProfileModalComponent = {
                 this.form = {
                     default_telegram_chat_id: this.user.default_telegram_chat_id || '',
                     default_api_id: this.user.default_api_id || '2040',
-                    default_api_hash: this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627',
+                    default_api_hash: this.user.default_api_hash || 'b18441a1ff607e10a9895462e627',
                     default_device_model: this.user.default_device_model || 'MS-7C75',
                     default_system_version: this.user.default_system_version || 'Windows 10',
                     default_app_version: this.user.default_app_version || '4.8.3',

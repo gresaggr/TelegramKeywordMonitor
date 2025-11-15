@@ -1,3 +1,4 @@
+// frontend/js/components/telegram-dashboard.js
 const TelegramDashboardComponent = {
     name: 'TelegramDashboardComponent',
     components: {
@@ -89,8 +90,8 @@ const TelegramDashboardComponent = {
 
                 <!-- Account List -->
                 <div class="website-header">
-                    <h2 class="website-title">Telegram Accounts</h2>
-                    <button @click="showAddModal = true" class="btn btn-primary btn-add-website">
+                    <h2 class="website-title">Telegram Accounts ({{ accounts.length }}/5)</h2>
+                    <button @click="handleAddClick" class="btn btn-primary btn-add-website">
                         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor; margin-right: 8px;">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
@@ -106,7 +107,7 @@ const TelegramDashboardComponent = {
                     </div>
                     <h3>No accounts yet</h3>
                     <p>Add your first Telegram account to start monitoring channels</p>
-                    <button @click="showAddModal = true" class="btn btn-primary" style="width: auto; padding: 12px 32px;">
+                    <button @click="handleAddClick" class="btn btn-primary" style="width: auto; padding: 12px 32px;">
                         Add Your First Account
                     </button>
                 </div>
@@ -146,16 +147,24 @@ const TelegramDashboardComponent = {
                                 <!-- Detailed info -->
                                 <div v-if="expandedItems[account.id]" class="site-info-grid">
                                     <div class="site-info-label">Channels:</div>
-                                    <div class="site-info-value">{{ account.monitored_channels.length }} channels</div>
+                                    <div class="site-info-value">
+                                        {{ account.monitored_channels.length }} ({{ account.monitored_channels.join(', ') }})
+                                    </div>
 
                                     <div class="site-info-label">Whitelist:</div>
                                     <div class="site-info-value">
-                                        {{ account.whitelist_keywords.length > 0 ? account.whitelist_keywords.length + ' keywords' : 'All messages' }}
+                                        <template v-if="account.whitelist_keywords.length > 0">
+                                            {{ account.whitelist_keywords.length }} ({{ account.whitelist_keywords.join(', ') }})
+                                        </template>
+                                        <template v-else>All messages</template>
                                     </div>
 
                                     <div class="site-info-label">Blacklist:</div>
                                     <div class="site-info-value">
-                                        {{ account.blacklist_keywords.length > 0 ? account.blacklist_keywords.length + ' keywords' : 'None' }}
+                                        <template v-if="account.blacklist_keywords.length > 0">
+                                            {{ account.blacklist_keywords.length }} ({{ account.blacklist_keywords.join(', ') }})
+                                        </template>
+                                        <template v-else>None</template>
                                     </div>
 
                                     <div class="site-info-label">Forward to:</div>
@@ -302,6 +311,14 @@ const TelegramDashboardComponent = {
         }
     },
     methods: {
+        handleAddClick() {
+            if (this.accounts.length >= 5) {
+                alert('Maximum number of accounts (5) reached. Please delete an existing account to add a new one.');
+                return;
+            }
+            this.showAddModal = true;
+        },
+
         toggleExpand(accountId) {
             this.expandedItems[accountId] = !this.expandedItems[accountId];
         },
@@ -374,9 +391,9 @@ const TelegramDashboardComponent = {
                 const notifications = await api.getAccountNotifications(account.id);
                 const messages = notifications.map(n =>
                     `[${new Date(n.created_at).toLocaleString()}] ${n.message}`
-                ).join('\\n\\n');
+                ).join('\n\n');
 
-                alert(`Notifications for ${account.phone_number}:\\n\\n${messages || 'No notifications'}`);
+                alert(`Notifications for ${account.phone_number}:\n\n${messages || 'No notifications'}`);
 
                 for (const n of notifications) {
                     if (!n.is_read) {

@@ -1,3 +1,4 @@
+# backend/app/api/v1/accounts.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -14,6 +15,8 @@ from app.schemas.account import (
 from app.api.deps import get_current_user
 from app.services.account_service import AccountService
 from app.core.logger import get_logger
+from sqlalchemy import select, func
+from app.models.account import TelegramAccount
 
 router = APIRouter()
 logger = get_logger("api.accounts")
@@ -27,10 +30,31 @@ async def create_account(
 ):
     """Create a new Telegram account and start authentication"""
     try:
+        # Check account limit
+        result = await db.execute(
+            select(func.count(TelegramAccount.id)).where(TelegramAccount.user_id == current_user.id)
+        )
+        account_count = result.scalar()
+
+        if account_count >= 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum number of accounts (5) reached. Please delete an existing account to add a new one."
+            )
+
+        # Validate channel limit
+        if len(account_data.monitored_channels) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum number of monitored channels is 5"
+            )
+
         account = await AccountService.create_account(account_data, current_user, db)
         return account
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating account: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -90,9 +114,18 @@ async def update_account(
 ):
     """Update Telegram account monitoring settings"""
     try:
+        # Validate channel limit
+        if account_data.monitored_channels is not None and len(account_data.monitored_channels) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum number of monitored channels is 5"
+            )
+
         return await AccountService.update_account(account_id, account_data, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
 
 
 @router.post("/{account_id}/start", response_model=TelegramAccountResponse)
