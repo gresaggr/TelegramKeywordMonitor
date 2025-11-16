@@ -32,5 +32,8 @@ const TaskListComponent = {
             </button>
         </div>
     `,
-    props: ['account']
+    props: ['account'],
+    components: {
+        'task-item-component': TaskItemComponent
+    }
 };

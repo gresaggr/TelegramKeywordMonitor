@@ -101,6 +101,9 @@ const AccountListItemComponent = {
         </div>
     `,
     props: ['account'],
+    components: {
+        'task-list-component': TaskListComponent
+    },
     data() {
         return {
             isExpanded: false
