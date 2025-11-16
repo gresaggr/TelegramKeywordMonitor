@@ -1,5 +1,6 @@
-import json
+"""Service for Telegram account operations"""
 from typing import List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 
@@ -16,28 +17,37 @@ from app.schemas.account import (
 )
 from app.telegram.client_manager import telegram_manager
 from app.core.logger import get_logger
+from .task_service import TaskService
+from .notification_service import NotificationService
 
 logger = get_logger("services.account")
 
 
 class AccountService:
-    @staticmethod
+    """Service for managing Telegram accounts"""
+
+    def __init__(self):
+        self.task_service = TaskService()
+        self.notification_service = NotificationService()
+
     async def create_account(
+            self,
             account_data: TelegramAccountCreate,
             user: User,
             db: AsyncSession
     ) -> TelegramAccountResponse:
         """Create a new Telegram account"""
+        # Check for duplicate phone number
         result = await db.execute(
             select(TelegramAccount).where(
                 TelegramAccount.user_id == user.id,
                 TelegramAccount.phone_number == account_data.phone_number
             )
         )
-        existing = result.scalar_one_or_none()
-        if existing:
+        if result.scalar_one_or_none():
             raise ValueError(f"Account with phone number {account_data.phone_number} already exists")
 
+        # Create account
         new_account = TelegramAccount(
             user_id=user.id,
             phone_number=account_data.phone_number,
@@ -67,7 +77,7 @@ class AccountService:
                 await db.commit()
 
             await db.refresh(new_account)
-            return await AccountService._to_response(new_account, db)
+            return await self._to_response(new_account, db)
 
         except Exception as e:
             logger.error(f"Error creating account: {e}")
@@ -76,24 +86,17 @@ class AccountService:
             await db.commit()
             raise
 
-    @staticmethod
     async def update_account(
+            self,
             account_id: int,
             account_data: TelegramAccountUpdate,
             user: User,
             db: AsyncSession
     ) -> TelegramAccountResponse:
         """Update account settings"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
+        account = await self._get_user_account(account_id, user, db)
 
+        # Update fields
         if account_data.name is not None:
             account.name = account_data.name
         if account_data.api_id is not None:
@@ -114,10 +117,10 @@ class AccountService:
 
         await db.commit()
         await db.refresh(account)
-        return await AccountService._to_response(account, db)
+        return await self._to_response(account, db)
 
-    @staticmethod
     async def verify_code(
+            self,
             account_id: int,
             code: str,
             two_fa_password: Optional[str],
@@ -125,22 +128,16 @@ class AccountService:
             db: AsyncSession
     ) -> TelegramAccountResponse:
         """Verify authentication code"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-
+        account = await self._get_user_account(account_id, user, db)
         await telegram_manager.verify_code(account_id, code, two_fa_password, db)
         await db.refresh(account)
-        return await AccountService._to_response(account, db)
+        return await self._to_response(account, db)
 
-    @staticmethod
-    async def get_accounts(user: User, db: AsyncSession) -> List[TelegramAccountResponse]:
+    async def get_accounts(
+            self,
+            user: User,
+            db: AsyncSession
+    ) -> List[TelegramAccountResponse]:
         """Get all accounts for user"""
         result = await db.execute(
             select(TelegramAccount)
@@ -148,34 +145,26 @@ class AccountService:
             .order_by(TelegramAccount.created_at.desc())
         )
         accounts = result.scalars().all()
-        return [await AccountService._to_response(acc, db) for acc in accounts]
+        return [await self._to_response(acc, db) for acc in accounts]
 
-    @staticmethod
-    async def get_account(account_id: int, user: User, db: AsyncSession) -> TelegramAccountResponse:
+    async def get_account(
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> TelegramAccountResponse:
         """Get specific account"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-        return await AccountService._to_response(account, db)
+        account = await self._get_user_account(account_id, user, db)
+        return await self._to_response(account, db)
 
-    @staticmethod
-    async def start_account(account_id: int, user: User, db: AsyncSession) -> TelegramAccountResponse:
+    async def start_account(
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> TelegramAccountResponse:
         """Start account monitoring"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
+        account = await self._get_user_account(account_id, user, db)
 
         if account.status in [AccountStatus.AWAITING_CODE, AccountStatus.AWAITING_2FA]:
             raise ValueError("Please complete authorization first")
@@ -194,96 +183,144 @@ class AccountService:
         await db.commit()
         await db.refresh(account)
 
-        return await AccountService._to_response(account, db)
+        return await self._to_response(account, db)
 
-    @staticmethod
-    async def stop_account(account_id: int, user: User, db: AsyncSession) -> TelegramAccountResponse:
+    async def stop_account(
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> TelegramAccountResponse:
         """Stop account monitoring"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-
+        account = await self._get_user_account(account_id, user, db)
         await telegram_manager.stop_client(account_id, db)
         await db.refresh(account)
-        return await AccountService._to_response(account, db)
+        return await self._to_response(account, db)
 
-    @staticmethod
-    async def delete_account(account_id: int, user: User, db: AsyncSession):
+    async def delete_account(
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
+    ):
         """Delete account"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-
+        account = await self._get_user_account(account_id, user, db)
         await telegram_manager.delete_client(account, account_id, db)
         await db.execute(delete(TelegramAccount).where(TelegramAccount.id == account_id))
         await db.commit()
 
-    @staticmethod
+    # Monitoring task methods (delegate to TaskService)
     async def create_monitoring_task(
+            self,
             account_id: int,
             task_data: MonitoringTaskCreate,
             user: User,
             db: AsyncSession
     ) -> MonitoringTaskResponse:
-        """Create a new monitoring task"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
+        """Create monitoring task"""
+        result = await self.task_service.create_task(account_id, task_data, user, db)
 
-        result = await db.execute(
-            select(func.count(MonitoringTask.id)).where(MonitoringTask.account_id == account_id)
-        )
-        task_count = result.scalar()
-        if task_count >= 5:
-            raise ValueError("Maximum number of monitoring tasks (5) reached for this account")
-
-        new_task = MonitoringTask(
-            account_id=account_id,
-            name=task_data.name,
-            whitelist_keywords=json.dumps(task_data.whitelist_keywords, ensure_ascii=False),
-            blacklist_keywords=json.dumps(task_data.blacklist_keywords, ensure_ascii=False),
-            monitored_channels=json.dumps(task_data.monitored_channels, ensure_ascii=False),
-            forward_to_chat_id=task_data.forward_to_chat_id,
-            replacements=json.dumps(task_data.replacements, ensure_ascii=False),
-            is_active=True
-        )
-
-        db.add(new_task)
-        await db.commit()
-        await db.refresh(new_task)
-
+        # Update monitoring if account is active
+        account = await self._get_user_account(account_id, user, db)
         if account.status == AccountStatus.ACTIVE and account.is_active:
             await telegram_manager.update_monitoring(account_id, db)
 
-        return AccountService._task_to_response(new_task)
+        return result
 
-    @staticmethod
     async def update_monitoring_task(
+            self,
             account_id: int,
             task_id: int,
             task_data: MonitoringTaskUpdate,
             user: User,
             db: AsyncSession
     ) -> MonitoringTaskResponse:
-        """Update a monitoring task"""
+        """Update monitoring task"""
+        result = await self.task_service.update_task(account_id, task_id, task_data, user, db)
+
+        # Update monitoring if account is active
+        account = await self._get_user_account(account_id, user, db)
+        if account.status == AccountStatus.ACTIVE and account.is_active:
+            await telegram_manager.update_monitoring(account_id, db)
+
+        return result
+
+    async def start_monitoring_task(
+            self,
+            account_id: int,
+            task_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> MonitoringTaskResponse:
+        """Start monitoring task"""
+        result = await self.task_service.toggle_task_status(account_id, task_id, True, user, db)
+
+        account = await self._get_user_account(account_id, user, db)
+        if account.status == AccountStatus.ACTIVE and account.is_active:
+            await telegram_manager.update_monitoring(account_id, db)
+
+        return result
+
+    async def stop_monitoring_task(
+            self,
+            account_id: int,
+            task_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> MonitoringTaskResponse:
+        """Stop monitoring task"""
+        result = await self.task_service.toggle_task_status(account_id, task_id, False, user, db)
+
+        account = await self._get_user_account(account_id, user, db)
+        if account.status == AccountStatus.ACTIVE and account.is_active:
+            await telegram_manager.update_monitoring(account_id, db)
+
+        return result
+
+    async def delete_monitoring_task(
+            self,
+            account_id: int,
+            task_id: int,
+            user: User,
+            db: AsyncSession
+    ):
+        """Delete monitoring task"""
+        await self.task_service.delete_task(account_id, task_id, user, db)
+
+        account = await self._get_user_account(account_id, user, db)
+        if account.status == AccountStatus.ACTIVE and account.is_active:
+            await telegram_manager.update_monitoring(account_id, db)
+
+    # Notification methods (delegate to NotificationService)
+    async def get_notifications(
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> List[AccountNotificationResponse]:
+        """Get account notifications"""
+        return await self.notification_service.get_notifications(account_id, user, db)
+
+    async def mark_notification_read(
+            self,
+            account_id: int,
+            notification_id: int,
+            user: User,
+            db: AsyncSession
+    ):
+        """Mark notification as read"""
+        await self.notification_service.mark_notification_read(
+            account_id, notification_id, user, db
+        )
+
+    # Helper methods
+    async def _get_user_account(
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
+    ) -> TelegramAccount:
+        """Get account and verify ownership"""
         result = await db.execute(
             select(TelegramAccount).where(
                 TelegramAccount.id == account_id,
@@ -293,153 +330,15 @@ class AccountService:
         account = result.scalar_one_or_none()
         if not account:
             raise ValueError("Account not found")
+        return account
 
-        result = await db.execute(
-            select(MonitoringTask).where(
-                MonitoringTask.id == task_id,
-                MonitoringTask.account_id == account_id
-            )
-        )
-        task = result.scalar_one_or_none()
-        if not task:
-            raise ValueError("Monitoring task not found")
-
-        if task_data.name is not None:
-            task.name = task_data.name
-        if task_data.whitelist_keywords is not None:
-            task.whitelist_keywords = json.dumps(task_data.whitelist_keywords, ensure_ascii=False)
-        if task_data.blacklist_keywords is not None:
-            task.blacklist_keywords = json.dumps(task_data.blacklist_keywords, ensure_ascii=False)
-        if task_data.monitored_channels is not None:
-            task.monitored_channels = json.dumps(task_data.monitored_channels, ensure_ascii=False)
-        if task_data.forward_to_chat_id is not None:
-            task.forward_to_chat_id = task_data.forward_to_chat_id
-        if task_data.replacements is not None:
-            task.replacements = json.dumps(task_data.replacements, ensure_ascii=False)
-        if task_data.is_active is not None:
-            task.is_active = task_data.is_active
-
-        await db.commit()
-        await db.refresh(task)
-
-        if account.status == AccountStatus.ACTIVE and account.is_active:
-            await telegram_manager.update_monitoring(account_id, db)
-
-        return AccountService._task_to_response(task)
-
-    @staticmethod
-    async def start_monitoring_task(account_id: int, task_id: int, user: User, db: AsyncSession) -> MonitoringTaskResponse:
-        """Start a monitoring task"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-
-        result = await db.execute(
-            select(MonitoringTask).where(
-                MonitoringTask.id == task_id,
-                MonitoringTask.account_id == account_id
-            )
-        )
-        task = result.scalar_one_or_none()
-        if not task:
-            raise ValueError("Monitoring task not found")
-
-        task.is_active = True
-        await db.commit()
-        await db.refresh(task)
-
-        if account.status == AccountStatus.ACTIVE and account.is_active:
-            await telegram_manager.update_monitoring(account_id, db)
-
-        return AccountService._task_to_response(task)
-
-    @staticmethod
-    async def stop_monitoring_task(account_id: int, task_id: int, user: User,
-                                   db: AsyncSession) -> MonitoringTaskResponse:
-        """Stop a monitoring task"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-
-        result = await db.execute(
-            select(MonitoringTask).where(
-                MonitoringTask.id == task_id,
-                MonitoringTask.account_id == account_id
-            )
-        )
-        task = result.scalar_one_or_none()
-        if not task:
-            raise ValueError("Monitoring task not found")
-
-        task.is_active = False
-        await db.commit()
-        await db.refresh(task)
-
-        if account.status == AccountStatus.ACTIVE and account.is_active:
-            await telegram_manager.update_monitoring(account_id, db)
-
-        return AccountService._task_to_response(task)
-
-    @staticmethod
-    async def delete_monitoring_task(account_id: int, task_id: int, user: User, db: AsyncSession):
-        """Delete a monitoring task"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        account = result.scalar_one_or_none()
-        if not account:
-            raise ValueError("Account not found")
-
-        result = await db.execute(
-            select(MonitoringTask).where(
-                MonitoringTask.id == task_id,
-                MonitoringTask.account_id == account_id
-            )
-        )
-        task = result.scalar_one_or_none()
-        if not task:
-            raise ValueError("Monitoring task not found")
-
-        await db.execute(delete(MonitoringTask).where(MonitoringTask.id == task_id))
-        await db.commit()
-
-        if account.status == AccountStatus.ACTIVE and account.is_active:
-            await telegram_manager.update_monitoring(account_id, db)
-
-    @staticmethod
-    def _task_to_response(task: MonitoringTask) -> MonitoringTaskResponse:
-        """Convert task to response model"""
-        return MonitoringTaskResponse(
-            id=task.id,
-            account_id=task.account_id,
-            name=task.name,
-            whitelist_keywords=json.loads(task.whitelist_keywords or "[]"),
-            blacklist_keywords=json.loads(task.blacklist_keywords or "[]"),
-            monitored_channels=json.loads(task.monitored_channels or "[]"),
-            forward_to_chat_id=task.forward_to_chat_id,
-            replacements=json.loads(task.replacements or "{}"),
-            is_active=task.is_active,
-            created_at=task.created_at
-        )
-
-    @staticmethod
-    async def _to_response(account: TelegramAccount, db: AsyncSession) -> TelegramAccountResponse:
+    async def _to_response(
+            self,
+            account: TelegramAccount,
+            db: AsyncSession
+    ) -> TelegramAccountResponse:
         """Convert account to response model"""
+        # Count unread notifications
         result = await db.execute(
             select(func.count(AccountNotification.id))
             .where(
@@ -449,6 +348,7 @@ class AccountService:
         )
         unread_count = result.scalar() or 0
 
+        # Get monitoring tasks
         result = await db.execute(
             select(MonitoringTask).where(MonitoringTask.account_id == account.id)
         )
@@ -464,50 +364,9 @@ class AccountService:
             unread_notifications_count=unread_count,
             created_at=account.created_at,
             last_activity=account.last_activity,
-            monitoring_tasks=[AccountService._task_to_response(t) for t in tasks]
+            monitoring_tasks=[self.task_service.task_to_response(t) for t in tasks]
         )
 
-    @staticmethod
-    async def get_notifications(account_id: int, user: User, db: AsyncSession) -> List[AccountNotificationResponse]:
-        """Get account notifications"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        if not result.scalar_one_or_none():
-            raise ValueError("Account not found")
 
-        result = await db.execute(
-            select(AccountNotification)
-            .where(AccountNotification.account_id == account_id)
-            .order_by(AccountNotification.created_at.desc())
-        )
-        return result.scalars().all()
-
-    @staticmethod
-    async def mark_notification_read(
-            account_id: int,
-            notification_id: int,
-            user: User,
-            db: AsyncSession
-    ):
-        """Mark notification as read"""
-        result = await db.execute(
-            select(TelegramAccount).where(
-                TelegramAccount.id == account_id,
-                TelegramAccount.user_id == user.id
-            )
-        )
-        if not result.scalar_one_or_none():
-            raise ValueError("Account not found")
-
-        result = await db.execute(select(AccountNotification).where(AccountNotification.id == notification_id,
-                                                                    AccountNotification.account_id == account_id))
-        notification = result.scalar_one_or_none()
-        if not notification:
-            raise ValueError("Notification not found")
-
-        notification.is_read = True
-        await db.commit()
+# Create singleton instance
+AccountService = AccountService()
