@@ -15,6 +15,12 @@ var translations = {
         'auth.signingIn': 'Signing in...',
         'auth.creatingAccount': 'Creating account...',
         'auth.createAccount': 'Create Account',
+
+        // Placeholders
+        'auth.placeholder.email': 'your@email.com',
+        'auth.placeholder.username': 'username',
+        'auth.placeholder.password': '••••••••',
+
         'header.dashboard': 'Dashboard',
         'header.logout': 'Logout',
         'header.profile': 'Profile',
@@ -64,6 +70,8 @@ var translations = {
         'tasks.add': 'Add Task',
         'tasks.addFirst': 'Add First Task',
         'tasks.empty': 'No monitoring tasks configured',
+
+        // Account Modal
         'modal.account.title.add': 'Add Telegram Account',
         'modal.account.title.edit': 'Edit Telegram Account',
         'modal.account.phone': 'Phone Number *',
@@ -83,6 +91,21 @@ var translations = {
         'modal.account.save': 'Create Account',
         'modal.account.save.edit': 'Save Changes',
         'modal.account.saving': 'Saving...',
+
+        // Account Modal Placeholders
+        'modal.account.placeholder.name': 'My Account',
+        'modal.account.placeholder.phone': '+1234567890',
+        'modal.account.placeholder.apiId': '12345678',
+        'modal.account.placeholder.apiHash': 'abcdef123456...',
+        'modal.account.placeholder.device': 'MS-7C75',
+        'modal.account.placeholder.system': 'Windows 10',
+        'modal.account.placeholder.app': '4.8.3',
+        'modal.account.placeholder.proxyHost': 'proxy.example.com',
+        'modal.account.placeholder.proxyPort': '1080',
+        'modal.account.hint.api': 'Get your API credentials from',
+        'modal.account.error.required': 'Please fill in phone number, API ID and API Hash',
+
+        // Task Modal
         'modal.task.title.add': 'Add Monitoring Task',
         'modal.task.title.edit': 'Edit Monitoring Task',
         'modal.task.name': 'Task Name *',
@@ -94,13 +117,30 @@ var translations = {
         'modal.task.forwardHint': 'Destination channel/chat for forwarded messages',
         'modal.task.replacements': 'Text Replacements',
         'modal.task.replacementsHint': 'Replace specific text in messages (one per line: old -> new)',
-        'modal.task.replacementsPlaceholder': 'Enter replacements in format: old_text -> new_text\nExample:\nspam -> ⭐️\nbad_word -> ***',
         'modal.task.includeLink': 'Include link to original message',
         'modal.task.includeLinkHint': 'Add "sended from [link]" at the end of forwarded messages',
         'modal.task.cancel': 'Cancel',
         'modal.task.save': 'Create Task',
         'modal.task.save.edit': 'Save Changes',
         'modal.task.saving': 'Saving...',
+
+        // Task Modal Placeholders
+        'modal.task.placeholder.name': 'e.g., Exchange, Games, News',
+        'modal.task.placeholder.whitelist': 'Enter keywords, one per line (leave empty to accept all messages)',
+        'modal.task.placeholder.blacklist': 'Enter keywords to exclude, one per line',
+        'modal.task.placeholder.channels': 'Enter channel IDs or usernames, one per line\nExample:\n@channelname\n-1001234567890',
+        'modal.task.placeholder.forward': '-1001234567890 or @username',
+        'modal.task.placeholder.replacements': 'Enter replacements in format: old_text -> new_text\nExample:\nspam -> ⭐️\nbad_word -> ***',
+        'modal.task.hint.name': 'Give this monitoring task a descriptive name',
+        'modal.task.hint.whitelist': 'Messages must contain at least one of these words',
+        'modal.task.hint.blacklist': 'Messages containing these words will be skipped',
+        'modal.task.hint.channels': '*****',
+        'modal.task.error.name': 'Please enter a task name',
+        'modal.task.error.channels.empty': 'Please add at least one channel to monitor',
+        'modal.task.error.channels.max': 'Maximum number of monitored channels is 5',
+        'modal.task.error.forward': 'Please specify where to forward messages',
+
+        // Verify Modal
         'modal.verify.title': 'Verify Code',
         'modal.verify.desc': 'Enter the verification code sent to your phone:',
         'modal.verify.code': 'Verification Code *',
@@ -109,6 +149,12 @@ var translations = {
         'modal.verify.cancel': 'Cancel',
         'modal.verify.verify': 'Verify',
         'modal.verify.verifying': 'Verifying...',
+        'modal.verify.placeholder.code': '12345',
+        'modal.verify.placeholder.2fa': 'Enter 2FA password',
+        'modal.verify.error.code': 'Please enter the verification code',
+        'modal.verify.success': 'Account verified successfully!',
+
+        // Profile Modal
         'modal.profile.title': 'Profile Settings',
         'modal.profile.accountInfo': 'Account Information',
         'modal.profile.username': 'Username (read-only)',
@@ -129,20 +175,82 @@ var translations = {
         'modal.profile.cancel': 'Cancel',
         'modal.profile.save': 'Save Changes',
         'modal.profile.saving': 'Saving...',
+        'modal.profile.success': 'Profile updated successfully!',
+
+        // Profile Modal Placeholders
+        'modal.profile.placeholder.chatId': '123456789 or leave empty',
+        'modal.profile.placeholder.forward': '-1001234567890 or @username',
+        'modal.profile.placeholder.apiId': '2040',
+        'modal.profile.placeholder.apiHash': 'b18441a1ff607e10a989891a5462e627',
+        'modal.profile.placeholder.device': 'MS-7C75',
+        'modal.profile.placeholder.system': 'Windows 10',
+        'modal.profile.placeholder.app': '4.8.3',
+        'modal.profile.hint.chatId': 'Channel where system error notifications will be sent.',
+        'modal.profile.hint.chatIdHelp': 'How to get Chat ID?',
+        'modal.profile.hint.chatIdSteps': 'Steps to get your Chat ID:\n1. Start a chat with @userinfobot in Telegram\n2. Send any message to the bot\n3. Copy your Chat ID from the bot\'s response\n4. Paste it here',
+        'modal.profile.hint.forward': 'Default destination for forwarding messages when adding new accounts',
+        'modal.profile.hint.defaults': 'These values will be used by default when adding new Telegram accounts. You can override them for each account.',
+
+        // Topup Modal
         'modal.topup.title': 'Top Up Balance',
         'modal.topup.amount': 'Amount ($)',
         'modal.topup.cancel': 'Cancel',
         'modal.topup.add': 'Add Funds (Stub)',
+        'modal.topup.placeholder.amount': '10.00',
+
+        // Toast & Alerts
         'toast.success': 'Success!',
         'toast.error': 'Error!',
+        'toast.accountCreated': 'Account created! Please verify the code sent to your phone.',
+        'toast.accountAdded': 'Account added and monitoring started!',
+        'toast.accountDeleted': 'Account deleted successfully!',
+        'toast.accountStopped': 'Account monitoring stopped!',
+        'toast.accountStarted': 'Account monitoring started!',
+        'toast.accountUpdated': 'Account updated successfully!',
+        'toast.taskCreated': 'Task created successfully!',
+        'toast.taskUpdated': 'Task updated successfully!',
+        'toast.taskStarted': 'Task started successfully!',
+        'toast.taskStopped': 'Task stopped successfully!',
+        'toast.taskDeleted': 'Task deleted successfully!',
+        'toast.balanceTopup': 'Balance topped up! (This is a stub - real payment integration needed)',
+
+        // Alerts & Errors
+        'alert.passwordMismatch': 'Passwords do not match',
+        'alert.passwordLength': 'Password must be at least 8 characters',
+        'alert.usernameLength': 'Username must be at least 3 characters',
+        'alert.loginFailed': 'Login failed',
+        'alert.registrationFailed': 'Registration failed',
+        'alert.accountAddFailed': 'Failed to add account',
+        'alert.accountDeleteFailed': 'Failed to delete account',
+        'alert.accountStopFailed': 'Failed to stop account',
+        'alert.accountStartFailed': 'Failed to start account',
+        'alert.accountUpdateFailed': 'Failed to update account',
+        'alert.taskSaveFailed': 'Failed to save task',
+        'alert.taskStartFailed': 'Failed to start task',
+        'alert.taskStopFailed': 'Failed to stop task',
+        'alert.taskDeleteFailed': 'Failed to delete task',
+        'alert.notificationsLoadFailed': 'Failed to load notifications',
+        'alert.topupFailed': 'Failed to top up',
+        'alert.profileUpdateFailed': 'Failed to update profile',
+        'alert.verificationFailed': 'Verification failed',
+
+        // Confirmations
         'confirm.delete.account': 'Are you sure you want to delete this account? This will stop monitoring and delete all tasks.',
         'confirm.stop.account': 'Stop monitoring this account?',
         'confirm.delete.task': 'Are you sure you want to delete this monitoring task?',
         'confirm.stop.task': 'Stop this monitoring task?',
+
+        // Errors
         'error.max.accounts': 'Maximum number of accounts (5) reached. Please delete an existing account to add a new one.',
         'error.max.tasks': 'Maximum number of monitoring tasks (5) reached for this account.',
+
+        // Notifications
         'notifications.title': 'Notifications for',
-        'notifications.unread': 'unread'
+        'notifications.unread': 'unread',
+        'notifications.empty': 'No notifications',
+
+        // Loading
+        'loading.text': 'Loading...'
     },
     ru: {
         'app.title': 'Монитор Ключевых Слов Telegram',
@@ -159,6 +267,12 @@ var translations = {
         'auth.signingIn': 'Вход...',
         'auth.creatingAccount': 'Создание аккаунта...',
         'auth.createAccount': 'Создать Аккаунт',
+
+        // Placeholders
+        'auth.placeholder.email': 'ваш@email.com',
+        'auth.placeholder.username': 'имя пользователя',
+        'auth.placeholder.password': '••••••••',
+
         'header.dashboard': 'Панель управления',
         'header.logout': 'Выход',
         'header.profile': 'Профиль',
@@ -208,15 +322,17 @@ var translations = {
         'tasks.add': 'Добавить Задачу',
         'tasks.addFirst': 'Добавить Первую Задачу',
         'tasks.empty': 'Нет задач мониторинга',
+
+        // Account Modal
         'modal.account.title.add': 'Добавить Telegram Аккаунт',
         'modal.account.title.edit': 'Редактировать Telegram Аккаунт',
         'modal.account.phone': 'Номер Телефона *',
         'modal.account.name': 'Имя Аккаунта',
         'modal.account.apiId': 'API ID *',
         'modal.account.apiHash': 'API Hash *',
-        'modal.account.device': 'Device Model',
-        'modal.account.system': 'System Version',
-        'modal.account.app': 'App Version',
+        'modal.account.device': 'Модель Устройства',
+        'modal.account.system': 'Версия Системы',
+        'modal.account.app': 'Версия Приложения',
         'modal.account.proxy': 'Настройки Прокси (Опционально)',
         'modal.account.proxy.host': 'Хост Прокси',
         'modal.account.proxy.port': 'Порт',
@@ -227,6 +343,21 @@ var translations = {
         'modal.account.save': 'Создать Аккаунт',
         'modal.account.save.edit': 'Сохранить Изменения',
         'modal.account.saving': 'Сохранение...',
+
+        // Account Modal Placeholders
+        'modal.account.placeholder.name': 'Мой Аккаунт',
+        'modal.account.placeholder.phone': '+1234567890',
+        'modal.account.placeholder.apiId': '12345678',
+        'modal.account.placeholder.apiHash': 'abcdef123456...',
+        'modal.account.placeholder.device': 'MS-7C75',
+        'modal.account.placeholder.system': 'Windows 10',
+        'modal.account.placeholder.app': '4.8.3',
+        'modal.account.placeholder.proxyHost': 'proxy.example.com',
+        'modal.account.placeholder.proxyPort': '1080',
+        'modal.account.hint.api': 'Получите API учетные данные на',
+        'modal.account.error.required': 'Пожалуйста, заполните номер телефона, API ID и API Hash',
+
+        // Task Modal
         'modal.task.title.add': 'Добавить Задачу Мониторинга',
         'modal.task.title.edit': 'Редактировать Задачу Мониторинга',
         'modal.task.name': 'Имя Задачи *',
@@ -238,13 +369,30 @@ var translations = {
         'modal.task.forwardHint': 'В какой канал пересылать сообщения',
         'modal.task.replacements': 'Замены Текста',
         'modal.task.replacementsHint': 'Заменять текст в сообщении (каждая замена с новой строки: что меняем -> на что меняем)',
-        'modal.task.replacementsPlaceholder': 'Замены в формате: что меняем -> на что меняем\nПример:\nспам -> ⭐️\nплохое слово -> ***',
         'modal.task.includeLink': 'Добавлять ссылку на оригинальное сообщение',
         'modal.task.includeLinkHint': 'Добавлять "Переслано с [link]" в конце сообщения',
         'modal.task.cancel': 'Отмена',
         'modal.task.save': 'Создать Задачу',
         'modal.task.save.edit': 'Сохранить Изменения',
         'modal.task.saving': 'Сохранение...',
+
+        // Task Modal Placeholders
+        'modal.task.placeholder.name': 'например: Биржа, Игры, Новости',
+        'modal.task.placeholder.whitelist': 'Введите ключевые слова, по одному в строке (оставьте пустым для всех сообщений)',
+        'modal.task.placeholder.blacklist': 'Введите ключевые слова для исключения, по одному в строке',
+        'modal.task.placeholder.channels': 'Введите ID каналов или имена пользователей, по одному в строке\nПример:\n@channelname\n-1001234567890',
+        'modal.task.placeholder.forward': '-1001234567890 или @username',
+        'modal.task.placeholder.replacements': 'Замены в формате: что_меняем -> на_что_меняем\nПример:\nспам -> ⭐️\nплохое_слово -> ***',
+        'modal.task.hint.name': 'Дайте этой задаче мониторинга описательное имя',
+        'modal.task.hint.whitelist': 'Сообщения должны содержать хотя бы одно из этих слов',
+        'modal.task.hint.blacklist': 'Сообщения, содержащие эти слова, будут пропущены',
+        'modal.task.hint.channels': '*****',
+        'modal.task.error.name': 'Пожалуйста, введите имя задачи',
+        'modal.task.error.channels.empty': 'Пожалуйста, добавьте хотя бы один канал для мониторинга',
+        'modal.task.error.channels.max': 'Максимальное количество отслеживаемых каналов - 5',
+        'modal.task.error.forward': 'Пожалуйста, укажите, куда пересылать сообщения',
+
+        // Verify Modal
         'modal.verify.title': 'Подтвердить Код',
         'modal.verify.desc': 'Введите код подтверждения, отправленный на ваш телефон:',
         'modal.verify.code': 'Код Подтверждения *',
@@ -253,6 +401,12 @@ var translations = {
         'modal.verify.cancel': 'Отмена',
         'modal.verify.verify': 'Подтвердить',
         'modal.verify.verifying': 'Проверка...',
+        'modal.verify.placeholder.code': '12345',
+        'modal.verify.placeholder.2fa': 'Введите пароль 2FA',
+        'modal.verify.error.code': 'Пожалуйста, введите код подтверждения',
+        'modal.verify.success': 'Аккаунт успешно подтвержден!',
+
+        // Profile Modal
         'modal.profile.title': 'Профиль Пользователя',
         'modal.profile.accountInfo': 'Информация об Аккаунте',
         'modal.profile.username': 'Имя Пользователя (только чтение)',
@@ -262,39 +416,92 @@ var translations = {
         'modal.profile.language.en': 'Английский',
         'modal.profile.language.ru': 'Русский',
         'modal.profile.telegramSettings': 'Настройки Telegram',
-        'modal.profile.chatId': 'Default Telegram Chat ID (для уведомлений об ошибках)',
-        'modal.profile.forward': 'Default Пересылать В Chat ID',
+        'modal.profile.chatId': 'ID Чата Telegram по Умолчанию (для уведомлений об ошибках)',
+        'modal.profile.forward': 'ID Чата для Пересылки по Умолчанию',
         'modal.profile.defaultSettings': 'Настройки Telegram Аккаунта По Умолчанию',
-        'modal.profile.apiId': 'Default API ID',
-        'modal.profile.apiHash': 'Default API Hash',
-        'modal.profile.device': 'Default Модель Устройства',
-        'modal.profile.system': 'Default Версия Системы',
-        'modal.profile.app': 'Default Версия Приложения',
+        'modal.profile.apiId': 'API ID По Умолчанию',
+        'modal.profile.apiHash': 'API Hash По Умолчанию',
+        'modal.profile.device': 'Модель Устройства По Умолчанию',
+        'modal.profile.system': 'Версия Системы По Умолчанию',
+        'modal.profile.app': 'Версия Приложения По Умолчанию',
         'modal.profile.cancel': 'Отмена',
         'modal.profile.save': 'Сохранить Изменения',
         'modal.profile.saving': 'Сохранение...',
+        'modal.profile.success': 'Профиль успешно обновлен!',
+
+        // Profile Modal Placeholders
+        'modal.profile.placeholder.chatId': '123456789 или оставьте пустым',
+        'modal.profile.placeholder.forward': '-1001234567890 или @username',
+        'modal.profile.placeholder.apiId': '2040',
+        'modal.profile.placeholder.apiHash': 'b18441a1ff607e10a989891a5462e627',
+        'modal.profile.placeholder.device': 'MS-7C75',
+        'modal.profile.placeholder.system': 'Windows 10',
+        'modal.profile.placeholder.app': '4.8.3',
+        'modal.profile.hint.chatId': 'Канал, куда будут отправляться системные уведомления об ошибках.',
+        'modal.profile.hint.chatIdHelp': 'Как получить Chat ID?',
+        'modal.profile.hint.chatIdSteps': 'Шаги для получения Chat ID:\n1. Начните чат с @userinfobot в Telegram\n2. Отправьте любое сообщение боту\n3. Скопируйте ваш Chat ID из ответа бота\n4. Вставьте его сюда',
+        'modal.profile.hint.forward': 'Направление по умолчанию для пересылки сообщений при добавлении новых аккаунтов',
+        'modal.profile.hint.defaults': 'Эти значения будут использоваться по умолчанию при добавлении новых Telegram аккаунтов. Вы можете переопределить их для каждого аккаунта.',
+
+        // Topup Modal
         'modal.topup.title': 'Пополнить Баланс',
         'modal.topup.amount': 'Сумма ($)',
         'modal.topup.cancel': 'Отмена',
         'modal.topup.add': 'Добавить Средства (Stub)',
+        'modal.topup.placeholder.amount': '10.00',
+
+        // Toast & Alerts
         'toast.success': 'Успех!',
         'toast.error': 'Ошибка!',
+        'toast.accountCreated': 'Аккаунт создан! Пожалуйста, подтвердите код, отправленный на ваш телефон.',
+        'toast.accountAdded': 'Аккаунт добавлен и мониторинг запущен!',
+        'toast.accountDeleted': 'Аккаунт успешно удален!',
+        'toast.accountStopped': 'Мониторинг аккаунта остановлен!',
+        'toast.accountStarted': 'Мониторинг аккаунта запущен!',
+        'toast.accountUpdated': 'Аккаунт успешно обновлен!',
+        'toast.taskCreated': 'Задача успешно создана!',
+        'toast.taskUpdated': 'Задача успешно обновлена!',
+        'toast.taskStarted': 'Задача успешно запущена!',
+        'toast.taskStopped': 'Задача успешно остановлена!',
+        'toast.taskDeleted': 'Задача успешно удалена!',
+        'toast.balanceTopup': 'Баланс пополнен! (Это заглушка - требуется интеграция с реальной платежной системой)',
+
+        // Alerts & Errors
+        'alert.passwordMismatch': 'Пароли не совпадают',
+        'alert.passwordLength': 'Пароль должен содержать минимум 8 символов',
+        'alert.usernameLength': 'Имя пользователя должно содержать минимум 3 символа',
+        'alert.loginFailed': 'Ошибка входа',
+        'alert.registrationFailed': 'Ошибка регистрации',
+        'alert.accountAddFailed': 'Не удалось добавить аккаунт',
+        'alert.accountDeleteFailed': 'Не удалось удалить аккаунт',
+        'alert.accountStopFailed': 'Не удалось остановить аккаунт',
+        'alert.accountStartFailed': 'Не удалось запустить аккаунт',
+        'alert.accountUpdateFailed': 'Не удалось обновить аккаунт',
+        'alert.taskSaveFailed': 'Не удалось сохранить задачу',
+        'alert.taskStartFailed': 'Не удалось запустить задачу',
+        'alert.taskStopFailed': 'Не удалось остановить задачу',
+        'alert.taskDeleteFailed': 'Не удалось удалить задачу',
+        'alert.notificationsLoadFailed': 'Не удалось загрузить уведомления',
+        'alert.topupFailed': 'Не удалось пополнить баланс',
+        'alert.profileUpdateFailed': 'Не удалось обновить профиль',
+        'alert.verificationFailed': 'Ошибка подтверждения',
+
+        // Confirmations
         'confirm.delete.account': 'Вы уверены, что хотите удалить этот аккаунт? Это остановит мониторинг и удалит все задачи.',
         'confirm.stop.account': 'Остановить мониторинг этого аккаунта?',
         'confirm.delete.task': 'Вы уверены, что хотите удалить эту задачу мониторинга?',
         'confirm.stop.task': 'Остановить эту задачу мониторинга?',
+
+        // Errors
         'error.max.accounts': 'Достигнуто максимальное количество аккаунтов (5). Пожалуйста, удалите существующий аккаунт, чтобы добавить новый.',
         'error.max.tasks': 'Достигнуто максимальное количество задач мониторинга (5) для этого аккаунта.',
-        'notifications.title': 'Уведомления для',
-        'notifications.unread': 'непрочитанных'
-    }
-};
 
-// Update language dynamically
-window.updateLanguage = function () {
-    if (window.vueApp && window.vueApp.$forceUpdate) {
-        window.vueApp.$forceUpdate();
+        // Notifications
+        'notifications.title': 'Уведомления для',
+        'notifications.unread': 'непрочитанных',
+        'notifications.empty': 'Нет уведомлений',
+
+        // Loading
+        'loading.text': 'Загрузка...'
     }
-    // Force re-render of all Vue components
-    document.dispatchEvent(new CustomEvent('language-changed'));
-};
+}

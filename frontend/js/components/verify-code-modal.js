@@ -33,14 +33,14 @@ const VerifyCodeModalComponent = {
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.verify.code') }}</label>
-                    <input v-model="code" type="text" class="form-input" placeholder="12345" @keyup.enter="handleVerify" required autofocus>
+                    <input v-model="code" type="text" class="form-input" :placeholder="t('modal.verify.placeholder.code')" @keyup.enter="handleVerify" required autofocus>
                 </div>
 
                 <div v-if="needs2FA" class="form-group">
                     <label class="form-label">{{ t('modal.verify.2fa') }}</label>
                     <div class="password-input-wrapper">
                         <input v-model="twoFaPassword" :type="showPassword ? 'text' : 'password'" class="form-input" 
-                               placeholder="Enter 2FA password" @keyup.enter="handleVerify">
+                               :placeholder="t('modal.verify.placeholder.2fa')" @keyup.enter="handleVerify">
                         <button @click="showPassword = !showPassword" class="password-toggle" type="button">
                             <svg v-if="!showPassword" viewBox="0 0 24 24" width="20" height="20">
                                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -80,7 +80,7 @@ const VerifyCodeModalComponent = {
         },
         async handleVerify() {
             if (!this.code) {
-                this.error = 'Please enter the verification code';
+                this.error = this.t('modal.verify.error.code');
                 return;
             }
 
@@ -90,10 +90,10 @@ const VerifyCodeModalComponent = {
 
             try {
                 await accountService.verifyCode(this.account.id, this.code, this.twoFaPassword || null);
-                this.success = 'Account verified successfully!';
+                this.success = this.t('modal.verify.success');
                 setTimeout(() => this.$emit('verified'), 1500);
             } catch (err) {
-                this.error = err.message || 'Verification failed';
+                this.error = err.message || this.t('alert.verificationFailed');
                 if (this.error.includes('2FA') || this.error.includes('password required')) {
                     this.needs2FA = true;
                 }

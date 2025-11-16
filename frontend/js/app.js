@@ -50,6 +50,9 @@ const app = createApp({
         }
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         async checkAuth() {
             const token = localStorage.getItem('token');
             if (token) {
@@ -101,7 +104,7 @@ const app = createApp({
                     this.languageTrigger++;
                 }
             } catch (err) {
-                this.error = err.message || 'Login failed';
+                this.error = err.message || this.t('alert.loginFailed');
             } finally {
                 this.loading = false;
             }
@@ -124,7 +127,7 @@ const app = createApp({
                     this.languageTrigger++;
                 }
             } catch (err) {
-                this.error = err.message || 'Registration failed';
+                this.error = err.message || this.t('alert.registrationFailed');
             } finally {
                 this.loading = false;
             }
@@ -146,12 +149,12 @@ const app = createApp({
                 await this.loadAccounts();
 
                 if (account.status === 'awaiting_code' || account.status === 'awaiting_2fa') {
-                    uiHelpers.showToast('Account created! Please verify the code sent to your phone.');
+                    uiHelpers.showToast(this.t('toast.accountCreated'));
                 } else {
-                    uiHelpers.showToast('Account added and monitoring started!');
+                    uiHelpers.showToast(this.t('toast.accountAdded'));
                 }
             } catch (err) {
-                alert('Failed to add account: ' + err.message);
+                alert(this.t('alert.accountAddFailed') + ': ' + err.message);
             }
         },
 
@@ -159,9 +162,9 @@ const app = createApp({
             try {
                 await accountService.deleteAccount(id);
                 await this.loadAccounts();
-                uiHelpers.showToast('Account deleted successfully!');
+                uiHelpers.showToast(this.t('toast.accountDeleted'));
             } catch (err) {
-                alert('Failed to delete account: ' + err.message);
+                alert(this.t('alert.accountDeleteFailed') + ': ' + err.message);
             }
         },
 
@@ -169,9 +172,9 @@ const app = createApp({
             try {
                 await accountService.stopAccount(id);
                 await this.loadAccounts();
-                uiHelpers.showToast('Account monitoring stopped!');
+                uiHelpers.showToast(this.t('toast.accountStopped'));
             } catch (err) {
-                alert('Failed to stop account: ' + err.message);
+                alert(this.t('alert.accountStopFailed') + ': ' + err.message);
             }
         },
 
@@ -179,9 +182,9 @@ const app = createApp({
             try {
                 await accountService.startAccount(id);
                 await this.loadAccounts();
-                uiHelpers.showToast('Account monitoring started!');
+                uiHelpers.showToast(this.t('toast.accountStarted'));
             } catch (err) {
-                alert('Failed to start account: ' + err.message);
+                alert(this.t('alert.accountStartFailed') + ': ' + err.message);
             }
         },
 

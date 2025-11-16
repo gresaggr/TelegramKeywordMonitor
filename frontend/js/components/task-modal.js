@@ -22,47 +22,41 @@ const TaskModalComponent = {
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.task.name') }}</label>
-                    <input v-model="form.name" type="text" class="form-input" placeholder="e.g., Биржа, Игры, Новости" required>
-                    <small style="color: #718096; font-size: 12px;">Give this monitoring task a descriptive name</small>
+                    <input v-model="form.name" type="text" class="form-input" :placeholder="t('modal.task.placeholder.name')" required>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.hint.name') }}</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.task.whitelist') }}</label>
                     <textarea v-model="whitelistInput" class="form-textarea" 
-                              placeholder="Enter keywords, one per line (leave empty to accept all messages)" rows="3"></textarea>
-                    <small style="color: #718096; font-size: 12px;">Messages must contain at least one of these words</small>
+                              :placeholder="t('modal.task.placeholder.whitelist')" rows="3"></textarea>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.hint.whitelist') }}</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.task.blacklist') }}</label>
                     <textarea v-model="blacklistInput" class="form-textarea" 
-                              placeholder="Enter keywords to exclude, one per line" rows="3"></textarea>
-                    <small style="color: #718096; font-size: 12px;">Messages containing these words will be skipped</small>
+                              :placeholder="t('modal.task.placeholder.blacklist')" rows="3"></textarea>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.hint.blacklist') }}</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.task.channels') }}</label>
                     <textarea v-model="channelsInput" class="form-textarea" rows="4" required
-                              placeholder="Enter channel IDs or usernames, one per line
-Example:
-@channelname
--1001234567890"></textarea>
-                    <small style="color: #718096; font-size: 12px;">*****</small>
+                              :placeholder="t('modal.task.placeholder.channels')"></textarea>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.hint.channels') }}</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.task.forward') }}</label>
-                    <input v-model="form.forward_to_chat_id" type="text" class="form-input" placeholder="-1001234567890 or @username" required>
+                    <input v-model="form.forward_to_chat_id" type="text" class="form-input" :placeholder="t('modal.task.placeholder.forward')" required>
                     <small style="color: #718096; font-size: 12px;">{{ t('modal.task.forwardHint') }}</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.task.replacements') }}</label>
                     <textarea v-model="replacementsInput" class="form-textarea" rows="4"
-                              placeholder="Enter replacements in format: old_text -> new_text
-Example:
-spam -> ⭐️
-bad_word -> ***"></textarea>
+                              :placeholder="t('modal.task.placeholder.replacements')"></textarea>
                     <small style="color: #718096; font-size: 12px;">{{ t('modal.task.replacementsHint') }}</small>
                 </div>
 
@@ -77,7 +71,7 @@ bad_word -> ***"></textarea>
                 <div class="modal-footer">
                     <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">{{ t('modal.task.cancel') }}</button>
                     <button @click="handleSave" class="btn btn-primary" :disabled="loading">
-                        {{ loading ? 'Saving...' : t(isEdit ? 'modal.task.save.edit' : 'modal.task.save') }}
+                        {{ loading ? t('modal.task.saving') : t(isEdit ? 'modal.task.save.edit' : 'modal.task.save') }}
                     </button>
                 </div>
             </div>
@@ -143,22 +137,22 @@ bad_word -> ***"></textarea>
             this.parseTextareas();
 
             if (!this.form.name) {
-                this.error = 'Please enter a task name';
+                this.error = this.t('modal.task.error.name');
                 return;
             }
 
             if (this.form.monitored_channels.length === 0) {
-                this.error = 'Please add at least one channel to monitor';
+                this.error = this.t('modal.task.error.channels.empty');
                 return;
             }
 
             if (this.form.monitored_channels.length > 5) {
-                this.error = 'Maximum number of monitored channels is 5';
+                this.error = this.t('modal.task.error.channels.max');
                 return;
             }
 
             if (!this.form.forward_to_chat_id) {
-                this.error = 'Please specify where to forward messages';
+                this.error = this.t('modal.task.error.forward');
                 return;
             }
 
@@ -166,7 +160,7 @@ bad_word -> ***"></textarea>
             try {
                 this.$emit('save', this.form);
             } catch (err) {
-                this.error = err.message || 'Failed to save task';
+                this.error = err.message || this.t('alert.taskSaveFailed');
             } finally {
                 this.loading = false;
             }

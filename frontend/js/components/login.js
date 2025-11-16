@@ -23,7 +23,7 @@ const LoginComponent = {
                         v-model="email"
                         type="email"
                         class="form-input"
-                        placeholder="your@email.com"
+                        :placeholder="t('auth.placeholder.email')"
                         @keyup.enter="submit"
                         required
                     >
@@ -36,7 +36,7 @@ const LoginComponent = {
                             v-model="password"
                             :type="showPassword ? 'text' : 'password'"
                             class="form-input"
-                            placeholder="••••••••"
+                            :placeholder="t('auth.placeholder.password')"
                             @keyup.enter="submit"
                             required
                         >

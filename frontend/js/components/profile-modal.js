@@ -27,7 +27,7 @@ const ProfileModalComponent = {
                     <span>{{ success }}</span>
                 </div>
 
-                <h3 style="margin: 20px 0 15px; color: #1a202c;">Account Information</h3>
+                <h3 style="margin: 20px 0 15px; color: #1a202c;">{{ t('modal.profile.accountInfo') }}</h3>
                 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.profile.email') }}</label>
@@ -47,69 +47,63 @@ const ProfileModalComponent = {
                     </select>
                 </div>
 
-                <h3 style="margin: 30px 0 15px; color: #1a202c;">Telegram Settings</h3>
+                <h3 style="margin: 30px 0 15px; color: #1a202c;">{{ t('modal.profile.telegramSettings') }}</h3>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.profile.chatId') }}</label>
-                    <input v-model="form.default_telegram_chat_id" type="text" class="form-input" placeholder="123456789 or leave empty">
+                    <input v-model="form.default_telegram_chat_id" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.chatId')">
                     <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
-                        Channel where system error notifications will be sent.
-                        <a href="#" @click.prevent="showTelegramHelp = !showTelegramHelp" style="color: #667eea;">How to get Chat ID?</a>
+                        {{ t('modal.profile.hint.chatId') }}
+                        <a href="#" @click.prevent="showTelegramHelp = !showTelegramHelp" style="color: #667eea;">{{ t('modal.profile.hint.chatIdHelp') }}</a>
                     </small>
                     <div v-if="showTelegramHelp" class="alert" style="margin-top: 10px; background: #e6f3ff; border: 1px solid #667eea; color: #2c5282;">
-                        <div style="font-size: 12px;">
-                            <strong>Steps to get your Chat ID:</strong><br>
-                            1. Start a chat with @userinfobot in Telegram<br>
-                            2. Send any message to the bot<br>
-                            3. Copy your Chat ID from the bot's response<br>
-                            4. Paste it here
-                        </div>
+                        <div style="font-size: 12px; white-space: pre-line;">{{ t('modal.profile.hint.chatIdSteps') }}</div>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.profile.forward') }}</label>
-                    <input v-model="form.default_forward_to_chat_id" type="text" class="form-input" placeholder="-1001234567890 or @username">
+                    <input v-model="form.default_forward_to_chat_id" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.forward')">
                     <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
-                        Default destination for forwarding messages when adding new accounts
+                        {{ t('modal.profile.hint.forward') }}
                     </small>
                 </div>
 
-                <h3 style="margin: 30px 0 15px; color: #1a202c;">Default Telegram Account Settings</h3>
+                <h3 style="margin: 30px 0 15px; color: #1a202c;">{{ t('modal.profile.defaultSettings') }}</h3>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
-                    These values will be used by default when adding new Telegram accounts. You can override them for each account.
+                    {{ t('modal.profile.hint.defaults') }}
                 </p>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label class="form-label">{{ t('modal.profile.apiId') }}</label>
-                        <input v-model="form.default_api_id" type="text" class="form-input" placeholder="2040">
+                        <input v-model="form.default_api_id" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.apiId')">
                     </div>
                     <div class="form-group">
                         <label class="form-label">{{ t('modal.profile.apiHash') }}</label>
-                        <input v-model="form.default_api_hash" type="text" class="form-input" placeholder="b18441a1ff607e10a989891a5462e627">
+                        <input v-model="form.default_api_hash" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.apiHash')">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.profile.device') }}</label>
-                    <input v-model="form.default_device_model" type="text" class="form-input" placeholder="MS-7C75">
+                    <input v-model="form.default_device_model" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.device')">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.profile.system') }}</label>
-                    <input v-model="form.default_system_version" type="text" class="form-input" placeholder="Windows 10">
+                    <input v-model="form.default_system_version" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.system')">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">{{ t('modal.profile.app') }}</label>
-                    <input v-model="form.default_app_version" type="text" class="form-input" placeholder="4.8.3">
+                    <input v-model="form.default_app_version" type="text" class="form-input" :placeholder="t('modal.profile.placeholder.app')">
                 </div>
 
                 <div class="modal-footer">
                     <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">{{ t('modal.profile.cancel') }}</button>
                     <button @click="handleSave" class="btn btn-primary" :disabled="loading">
-                        {{ loading ? 'Saving...' : t('modal.profile.save') }}
+                        {{ loading ? t('modal.profile.saving') : t('modal.profile.save') }}
                     </button>
                 </div>
             </div>
@@ -175,7 +169,7 @@ const ProfileModalComponent = {
                 );
 
                 await authService.updateProfile(data);
-                this.success = 'Profile updated successfully!';
+                this.success = this.t('modal.profile.success');
 
                 if (window.setLanguage) {
                     window.setLanguage(this.form.language);
@@ -187,7 +181,7 @@ const ProfileModalComponent = {
                 }, 1500);
             } catch (err) {
                 console.error('Profile update error:', err);
-                this.error = err.message || 'Failed to update profile';
+                this.error = err.message || this.t('alert.profileUpdateFailed');
             } finally {
                 this.loading = false;
             }

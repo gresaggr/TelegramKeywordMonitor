@@ -186,11 +186,11 @@ const TelegramDashboardComponent = {
             if (this.isEditingAccount) {
                 try {
                     await accountService.updateAccount(this.editingAccount.id, data);
-                    uiHelpers.showToast('Account updated successfully!');
+                    uiHelpers.showToast(this.t('toast.accountUpdated'));
                     this.closeAccountModal();
                     this.$emit('reload-accounts');
                 } catch (err) {
-                    alert('Failed to update account: ' + err.message);
+                    alert(this.t('alert.accountUpdateFailed') + ': ' + err.message);
                 }
             } else {
                 this.$emit('add-account', data);
@@ -210,7 +210,7 @@ const TelegramDashboardComponent = {
                     `[${new Date(n.created_at).toLocaleString()}] ${n.message}`
                 ).join('\n\n');
 
-                alert(`${this.t('notifications.title')} ${account.name || account.phone_number}:\n\n${messages || 'No notifications'}`);
+                alert(`${this.t('notifications.title')} ${account.name || account.phone_number}:\n\n${messages || this.t('notifications.empty')}`);
 
                 for (const n of notifications) {
                     if (!n.is_read) {
@@ -220,13 +220,13 @@ const TelegramDashboardComponent = {
 
                 this.$emit('reload-accounts');
             } catch (err) {
-                alert('Failed to load notifications: ' + err.message);
+                alert(this.t('alert.notificationsLoadFailed') + ': ' + err.message);
             }
         },
 
         handleTopupSuccess() {
             this.$emit('reload-user');
-            uiHelpers.showToast('Balance topped up! (This is a stub - real payment integration needed)');
+            uiHelpers.showToast(this.t('toast.balanceTopup'));
         },
 
         handleAddTask(account) {
@@ -251,25 +251,25 @@ const TelegramDashboardComponent = {
             try {
                 if (this.isEditingTask) {
                     await taskService.updateTask(this.currentAccountId, this.editingTask.id, data);
-                    uiHelpers.showToast('Task updated successfully!');
+                    uiHelpers.showToast(this.t('toast.taskUpdated'));
                 } else {
                     await taskService.createTask(this.currentAccountId, data);
-                    uiHelpers.showToast('Task created successfully!');
+                    uiHelpers.showToast(this.t('toast.taskCreated'));
                 }
                 this.closeTaskModal();
                 this.$emit('reload-accounts');
             } catch (err) {
-                alert('Failed to save task: ' + err.message);
+                alert(this.t('alert.taskSaveFailed') + ': ' + err.message);
             }
         },
 
         async handleStartTask(accountId, taskId) {
             try {
                 await taskService.startTask(accountId, taskId);
-                uiHelpers.showToast('Task started successfully!');
+                uiHelpers.showToast(this.t('toast.taskStarted'));
                 this.$emit('reload-accounts');
             } catch (err) {
-                alert('Failed to start task: ' + err.message);
+                alert(this.t('alert.taskStartFailed') + ': ' + err.message);
             }
         },
 
@@ -277,10 +277,10 @@ const TelegramDashboardComponent = {
             if (confirm(this.t('confirm.stop.task'))) {
                 try {
                     await taskService.stopTask(accountId, taskId);
-                    uiHelpers.showToast('Task stopped successfully!');
+                    uiHelpers.showToast(this.t('toast.taskStopped'));
                     this.$emit('reload-accounts');
                 } catch (err) {
-                    alert('Failed to stop task: ' + err.message);
+                    alert(this.t('alert.taskStopFailed') + ': ' + err.message);
                 }
             }
         },
@@ -289,10 +289,10 @@ const TelegramDashboardComponent = {
             if (confirm(this.t('confirm.delete.task'))) {
                 try {
                     await taskService.deleteTask(accountId, taskId);
-                    uiHelpers.showToast('Task deleted successfully!');
+                    uiHelpers.showToast(this.t('toast.taskDeleted'));
                     this.$emit('reload-accounts');
                 } catch (err) {
-                    alert('Failed to delete task: ' + err.message);
+                    alert(this.t('alert.taskDeleteFailed') + ': ' + err.message);
                 }
             }
         },
