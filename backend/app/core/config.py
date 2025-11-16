@@ -46,7 +46,7 @@ class Settings(BaseSettings):
 
     # Telegram Bot for admin notifications
     TELEGRAM_BOT_TOKEN: str = ""
-    ADMIN_TELEGRAM_CHAT_ID: str = ""  # Общий админский канал
+    ADMIN_TELEGRAM_CHAT_ID: str = ""
 
     # Telegram sessions directory
     SESSIONS_DIR: str = "/app/backend/sessions"
@@ -59,8 +59,14 @@ class Settings(BaseSettings):
     USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
     # Billing settings
-    MONTHLY_COST_MAX: float = 1000.0  # Cost for 5 accounts + 25 tasks (5*5)
+    MONTHLY_COST_MAX: float = 1000.0
     BALANCE_CHECK_INTERVAL: int = 600  # 10 minutes in seconds
+
+    # YooKassa payment settings
+    YOOKASSA_SHOP_ID: str = ""
+    YOOKASSA_SECRET_KEY: str = ""
+    YOOKASSA_RETURN_URL: str = "http://localhost:8080"
+    YOOKASSA_WEBHOOK_URL: str = ""
 
     env_path: ClassVar[str] = str(Path(__file__).parent.parent.parent.parent / ".env")
     model_config = SettingsConfigDict(

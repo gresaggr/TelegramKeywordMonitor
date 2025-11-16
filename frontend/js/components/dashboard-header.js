@@ -42,7 +42,7 @@ const DashboardHeaderComponent = {
             const label = this.t("modal.profile.balance");
             const label_hour = this.t("modal.profile.balance.hour");
             if (this.balanceInfo.hourly_cost > 0) {
-                const cost = this.balanceInfo.hourly_cost.toFixed(4);
+                const cost = this.balanceInfo.hourly_cost.toFixed(2);
                 return `${label}: ${balance} <span style="font-size: 11px; color: #718096; margin-left: 5px;">(-${cost}/${label_hour})</span>`;
             }
             return `${label}: ${balance}`;

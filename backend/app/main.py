@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.logger import logger
-from app.api.v1 import auth, balance, accounts
+from app.api.v1 import auth, balance, accounts, payments
 from app.telegram.client_manager import telegram_manager
 from app.db.session import async_session_maker
 from app.services.billing_service import billing_service
@@ -37,6 +37,10 @@ async def lifespan(app: FastAPI):
         logger.info("🔔 Telegram Bot: ✓ Configured")
     else:
         logger.info("🔔 Telegram Bot: ✗ Not configured")
+    if settings.YOOKASSA_SHOP_ID and settings.YOOKASSA_SECRET_KEY:
+        logger.info("💳 YooKassa: ✓ Configured")
+    else:
+        logger.info("💳 YooKassa: ✗ Not configured")
     logger.info("=" * 60)
 
     # Restore active accounts
@@ -100,6 +104,12 @@ app.include_router(
     tags=["Telegram Accounts"]
 )
 
+app.include_router(
+    payments.router,
+    prefix=f"{settings.API_V1_PREFIX}/payments",
+    tags=["Payments"]
+)
+
 
 @app.get("/", tags=["Root"])
 async def root():
@@ -116,7 +126,8 @@ async def root():
             "Message forwarding with replacements",
             "Real-time notifications",
             "User dashboard",
-            "Automated billing"
+            "Automated billing",
+            "YooKassa payment integration"
         ]
     }
 

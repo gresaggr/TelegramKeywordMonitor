@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Processing - Telegram Monitor</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .payment-status {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .payment-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .payment-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .payment-icon.loading {
+            background: #f0f4ff;
+            animation: pulse 1.5s infinite;
+        }
+
+        .payment-icon.success {
+            background: #d4edda;
+        }
+
+        .payment-icon.error {
+            background: #f8d7da;
+        }
+
+        .payment-icon svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .payment-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 20px 0 10px;
+            color: #2d3748;
+        }
+
+        .payment-message {
+            color: #718096;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .btn-return {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-return:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+<div class="payment-status">
+    <div class="payment-card">
+        <div id="paymentIcon" class="payment-icon loading">
+            <div class="spinner"></div>
+        </div>
+        <h1 id="paymentTitle" class="payment-title">Processing Payment...</h1>
+        <p id="paymentMessage" class="payment-message">
+            Please wait while we verify your payment status.
+        </p>
+        <a href="/" class="btn-return" id="returnButton" style="display: none;">
+            Return to Dashboard
+        </a>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+<script>
+    const API_URL = 'http://localhost:8000/api/v1';
+
+    async function checkPaymentStatus() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('payment_id');
+
+        if (!paymentId) {
+            showError('No payment ID found in URL');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            showError('Not authenticated. Please log in.');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 3000);
+            return;
+        }
+
+        try {
+            const response = await axios({
+                url: `${API_URL}/payments/${paymentId}/check`,
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const payment = response.data;
+
+            if (payment.status === 'succeeded') {
+                showSuccess(`Payment successful! ${payment.amount} RUB added to your balance.`);
+            } else if (payment.status === 'pending') {
+                showPending('Payment is still being processed. Please wait...');
+                // Check again in 3 seconds
+                setTimeout(checkPaymentStatus, 3000);
+            } else if (payment.status === 'canceled') {
+                showError('Payment was canceled.');
+            } else {
+                showError('Payment failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error checking payment:', error);
+            showError(error.response?.data?.detail || 'Failed to check payment status');
+        }
+    }
+
+    function showSuccess(message) {
+        const icon = document.getElementById('paymentIcon');
+        const title = document.getElementById('paymentTitle');
+        const msg = document.getElementById('paymentMessage');
+        const btn = document.getElementById('returnButton');
+
+        icon.className = 'payment-icon success';
+        icon.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="#28a745">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+            `;
+        title.textContent = 'Payment Successful!';
+        msg.textContent = message;
+        btn.style.display = 'inline-block';
+    }
+
+    function showError(message) {
+        const icon = document.getElementById('paymentIcon');
+        const title = document.getElementById('paymentTitle');
+        const msg = document.getElementById('paymentMessage');
+        const btn = document.getElementById('returnButton');
+
+        icon.className = 'payment-icon error';
+        icon.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="#dc3545">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+            `;
+        title.textContent = 'Payment Failed';
+        msg.textContent = message;
+        btn.style.display = 'inline-block';
+    }
+
+    function showPending(message) {
+        const msg = document.getElementById('paymentMessage');
+        msg.textContent = message;
+    }
+
+    // Start checking payment status
+    checkPaymentStatus();
+</script>
+</body>
+</html>

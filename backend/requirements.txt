@@ -33,5 +33,9 @@ python-multipart==0.0.6
 python-dotenv==1.0.0
 aiofiles==23.2.1
 
+# YooKassa payment integration
+yookassa==3.0.0
+
 # Optional: Flower for Celery monitoring
 # flower==2.0.1
+

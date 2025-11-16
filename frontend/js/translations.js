@@ -194,10 +194,15 @@ var translations = {
 
         // Topup Modal
         'modal.topup.title': 'Top Up Balance',
-        'modal.topup.amount': 'Amount ($)',
+        'modal.topup.amount': 'Amount (rub)',
         'modal.topup.cancel': 'Cancel',
         'modal.topup.add': 'Add Funds (Stub)',
         'modal.topup.placeholder.amount': '10.00',
+        'modal.topup.paymentMethod': 'Payment method',
+        'modal.topup.total': 'Total pay',
+        'modal.topup.pay': 'Make pay',
+        'modal.topup.hint': 'Add to balance',
+
 
         // Toast & Alerts
         'toast.success': 'Success!',
@@ -447,10 +452,14 @@ var translations = {
 
         // Topup Modal
         'modal.topup.title': 'Пополнить Баланс',
-        'modal.topup.amount': 'Сумма ($)',
+        'modal.topup.amount': 'Сумма (руб)',
         'modal.topup.cancel': 'Отмена',
         'modal.topup.add': 'Добавить Средства (Stub)',
         'modal.topup.placeholder.amount': '10.00',
+        'modal.topup.paymentMethod': 'Оплата через',
+        'modal.topup.total': 'К оплате',
+        'modal.topup.pay': 'Оплатить',
+        'modal.topup.hint': 'На сколько пополнить баланс',
 
         // Toast & Alerts
         'toast.success': 'Успех!',

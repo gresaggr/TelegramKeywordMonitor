@@ -30,3 +30,4 @@ class User(Base):
 
     # Relationships
     telegram_accounts = relationship("TelegramAccount", back_populates="user", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="user", cascade="all, delete-orphan")
