@@ -66,6 +66,7 @@ class MonitoringTask(Base):
     monitored_channels = Column(Text, nullable=False)
     forward_to_chat_id = Column(String, nullable=False)
     replacements = Column(Text, nullable=True)
+    include_source_link = Column(Boolean, default=False)
 
     is_active = Column(Boolean, default=True)
 

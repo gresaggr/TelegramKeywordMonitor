@@ -1,7 +1,23 @@
 // frontend/js/app.js
 const {createApp} = Vue;
 
-createApp({
+// Translation helper
+window.currentLanguage = 'en';
+window.t = function (key) {
+    const lang = window.currentLanguage || 'en';
+    return translations[lang] && translations[lang][key] ? translations[lang][key] : key;
+};
+
+window.setLanguage = function (lang) {
+    window.currentLanguage = lang;
+    localStorage.setItem('language', lang);
+    // Trigger Vue reactivity
+    if (window.vueApp) {
+        window.vueApp.$forceUpdate();
+    }
+};
+
+const app = createApp({
     components: {
         'login-component': LoginComponent,
         'register-component': RegisterComponent,
@@ -15,10 +31,19 @@ createApp({
             loading: false,
             error: '',
             user: null,
-            accounts: []
+            accounts: [],
+            languageTrigger: 0
         };
     },
     async mounted() {
+        window.vueApp = this;
+
+        // Load language from localStorage or user profile
+        const savedLang = localStorage.getItem('language');
+        if (savedLang) {
+            window.setLanguage(savedLang);
+        }
+
         await this.checkAuth();
         if (this.isAuthenticated) {
             setInterval(() => this.loadAccounts(), 30000);
@@ -32,6 +57,12 @@ createApp({
                     await this.loadUserData();
                     await this.loadAccounts();
                     this.isAuthenticated = true;
+
+                    // Set language from user profile
+                    if (this.user && this.user.language) {
+                        window.setLanguage(this.user.language);
+                        this.languageTrigger++;
+                    }
                 } catch (err) {
                     console.error('Auth check failed:', err);
                     localStorage.removeItem('token');
@@ -63,6 +94,12 @@ createApp({
                 await this.loadUserData();
                 await this.loadAccounts();
                 this.isAuthenticated = true;
+
+                // Set language from user profile
+                if (this.user && this.user.language) {
+                    window.setLanguage(this.user.language);
+                    this.languageTrigger++;
+                }
             } catch (err) {
                 this.error = err.message || 'Login failed';
             } finally {
@@ -80,6 +117,12 @@ createApp({
                 await this.loadUserData();
                 await this.loadAccounts();
                 this.isAuthenticated = true;
+
+                // Set language from user profile
+                if (this.user && this.user.language) {
+                    window.setLanguage(this.user.language);
+                    this.languageTrigger++;
+                }
             } catch (err) {
                 this.error = err.message || 'Registration failed';
             } finally {
@@ -93,6 +136,8 @@ createApp({
             this.user = null;
             this.accounts = [];
             this.error = '';
+            window.setLanguage('en');
+            this.languageTrigger++;
         },
 
         async handleAddAccount(data) {
@@ -143,6 +188,10 @@ createApp({
         async handleReloadUser() {
             try {
                 await this.loadUserData();
+                if (this.user && this.user.language) {
+                    window.setLanguage(this.user.language);
+                    this.languageTrigger++;
+                }
             } catch (err) {
                 console.error('Failed to reload user data:', err);
             }
@@ -152,4 +201,6 @@ createApp({
             await this.loadAccounts();
         }
     }
-}).mount('#app');
+});
+
+app.mount('#app');

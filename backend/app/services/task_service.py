@@ -32,16 +32,17 @@ class TaskService:
             monitored_channels=json.loads(task.monitored_channels or "[]"),
             forward_to_chat_id=task.forward_to_chat_id,
             replacements=json.loads(task.replacements or "{}"),
+            include_source_link=task.include_source_link,
             is_active=task.is_active,
             created_at=task.created_at
         )
 
     async def create_task(
-        self,
-        account_id: int,
-        task_data: MonitoringTaskCreate,
-        user: User,
-        db: AsyncSession
+            self,
+            account_id: int,
+            task_data: MonitoringTaskCreate,
+            user: User,
+            db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Create a new monitoring task"""
         # Verify account ownership
@@ -65,6 +66,7 @@ class TaskService:
             monitored_channels=json.dumps(task_data.monitored_channels, ensure_ascii=False),
             forward_to_chat_id=task_data.forward_to_chat_id,
             replacements=json.dumps(task_data.replacements, ensure_ascii=False),
+            include_source_link=task_data.include_source_link,
             is_active=True
         )
 
@@ -75,12 +77,12 @@ class TaskService:
         return self.task_to_response(new_task)
 
     async def update_task(
-        self,
-        account_id: int,
-        task_id: int,
-        task_data: MonitoringTaskUpdate,
-        user: User,
-        db: AsyncSession
+            self,
+            account_id: int,
+            task_id: int,
+            task_data: MonitoringTaskUpdate,
+            user: User,
+            db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Update a monitoring task"""
         # Verify account ownership
@@ -102,6 +104,8 @@ class TaskService:
             task.forward_to_chat_id = task_data.forward_to_chat_id
         if task_data.replacements is not None:
             task.replacements = json.dumps(task_data.replacements, ensure_ascii=False)
+        if task_data.include_source_link is not None:
+            task.include_source_link = task_data.include_source_link
         if task_data.is_active is not None:
             task.is_active = task_data.is_active
 
@@ -111,12 +115,12 @@ class TaskService:
         return self.task_to_response(task)
 
     async def toggle_task_status(
-        self,
-        account_id: int,
-        task_id: int,
-        is_active: bool,
-        user: User,
-        db: AsyncSession
+            self,
+            account_id: int,
+            task_id: int,
+            is_active: bool,
+            user: User,
+            db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Start or stop a monitoring task"""
         await self._get_user_account(account_id, user, db)
@@ -129,11 +133,11 @@ class TaskService:
         return self.task_to_response(task)
 
     async def delete_task(
-        self,
-        account_id: int,
-        task_id: int,
-        user: User,
-        db: AsyncSession
+            self,
+            account_id: int,
+            task_id: int,
+            user: User,
+            db: AsyncSession
     ):
         """Delete a monitoring task"""
         await self._get_user_account(account_id, user, db)
@@ -145,10 +149,10 @@ class TaskService:
         await db.commit()
 
     async def _get_user_account(
-        self,
-        account_id: int,
-        user: User,
-        db: AsyncSession
+            self,
+            account_id: int,
+            user: User,
+            db: AsyncSession
     ) -> TelegramAccount:
         """Get account and verify ownership"""
         result = await db.execute(
@@ -163,10 +167,10 @@ class TaskService:
         return account
 
     async def _get_task(
-        self,
-        account_id: int,
-        task_id: int,
-        db: AsyncSession
+            self,
+            account_id: int,
+            task_id: int,
+            db: AsyncSession
     ) -> MonitoringTask:
         """Get task by ID"""
         result = await db.execute(

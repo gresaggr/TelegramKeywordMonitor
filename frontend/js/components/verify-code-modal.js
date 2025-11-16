@@ -5,7 +5,7 @@ const VerifyCodeModalComponent = {
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 450px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">Verify Code</h2>
+                    <h2 class="modal-title">{{ t('modal.verify.title') }}</h2>
                     <button @click="$emit('close')" class="btn-close">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -28,16 +28,16 @@ const VerifyCodeModalComponent = {
                 </div>
 
                 <p style="color: #718096; margin-bottom: 20px;">
-                    Enter the verification code sent to your phone: <strong>{{ account.phone_number }}</strong>
+                    {{ t('modal.verify.desc') }} <strong>{{ account.phone_number }}</strong>
                 </p>
 
                 <div class="form-group">
-                    <label class="form-label">Verification Code *</label>
+                    <label class="form-label">{{ t('modal.verify.code') }}</label>
                     <input v-model="code" type="text" class="form-input" placeholder="12345" @keyup.enter="handleVerify" required autofocus>
                 </div>
 
                 <div v-if="needs2FA" class="form-group">
-                    <label class="form-label">Two-Factor Password</label>
+                    <label class="form-label">{{ t('modal.verify.2fa') }}</label>
                     <div class="password-input-wrapper">
                         <input v-model="twoFaPassword" :type="showPassword ? 'text' : 'password'" class="form-input" 
                                placeholder="Enter 2FA password" @keyup.enter="handleVerify">
@@ -50,13 +50,13 @@ const VerifyCodeModalComponent = {
                             </svg>
                         </button>
                     </div>
-                    <small style="color: #718096; font-size: 12px;">Your account has 2FA enabled. Please enter your password.</small>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.verify.2fa.desc') }}</small>
                 </div>
 
                 <div class="modal-footer">
-                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">Cancel</button>
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">{{ t('modal.verify.cancel') }}</button>
                     <button @click="handleVerify" class="btn btn-primary" :disabled="loading || !code">
-                        {{ loading ? 'Verifying...' : 'Verify' }}
+                        {{ loading ? t('modal.verify.verifying') : t('modal.verify.verify') }}
                     </button>
                 </div>
             </div>
@@ -75,6 +75,9 @@ const VerifyCodeModalComponent = {
         };
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         async handleVerify() {
             if (!this.code) {
                 this.error = 'Please enter the verification code';

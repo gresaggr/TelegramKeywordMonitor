@@ -7,8 +7,8 @@ const LoginComponent = {
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
                 </div>
-                <h1 class="auth-title">Website Monitor</h1>
-                <p class="auth-subtitle">Sign in to your account</p>
+                <h1 class="auth-title">{{ t('app.title') }}</h1>
+                <p class="auth-subtitle">{{ t('auth.login') }}</p>
 
                 <div v-if="error" class="alert alert-error">
                     <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
@@ -18,7 +18,7 @@ const LoginComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">{{ t('auth.email') }}</label>
                     <input
                         v-model="email"
                         type="email"
@@ -30,7 +30,7 @@ const LoginComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Password</label>
+                    <label class="form-label">{{ t('auth.password') }}</label>
                     <div class="password-input-wrapper">
                         <input
                             v-model="password"
@@ -52,12 +52,12 @@ const LoginComponent = {
                 </div>
 
                 <button @click="submit" :disabled="loading" class="btn btn-primary">
-                    {{ loading ? 'Signing in...' : 'Sign In' }}
+                    {{ loading ? t('auth.signingIn') : t('auth.login') }}
                 </button>
 
                 <div class="auth-switch">
-                    Don't have an account?
-                    <a @click="$emit('switch-to-register')" class="auth-link">Register</a>
+                    {{ t('auth.noAccount') }}
+                    <a @click="$emit('switch-to-register')" class="auth-link">{{ t('auth.switchToRegister') }}</a>
                 </div>
             </div>
         </div>
@@ -71,6 +71,9 @@ const LoginComponent = {
         };
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         submit() {
             if (this.email && this.password) {
                 this.$emit('login', {email: this.email, password: this.password});

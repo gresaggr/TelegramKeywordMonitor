@@ -5,7 +5,7 @@ const AccountModalComponent = {
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2 class="modal-title">{{ isEdit ? 'Edit Telegram Account' : 'Add Telegram Account' }}</h2>
+                    <h2 class="modal-title">{{ t(isEdit ? 'modal.account.title.edit' : 'modal.account.title.add') }}</h2>
                     <button @click="$emit('close')" class="btn-close">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -23,22 +23,22 @@ const AccountModalComponent = {
                 <h3 style="margin: 20px 0 15px; color: #1a202c;">Authentication</h3>
                 
                 <div class="form-group">
-                    <label class="form-label">Account Name</label>
+                    <label class="form-label">{{ t('modal.account.name') }}</label>
                     <input v-model="form.name" type="text" class="form-input" placeholder="My Account">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Phone Number *</label>
+                    <label class="form-label">{{ t('modal.account.phone') }}</label>
                     <input v-model="form.phone_number" type="tel" class="form-input" placeholder="+1234567890" :disabled="isEdit" required>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
-                        <label class="form-label">API ID *</label>
+                        <label class="form-label">{{ t('modal.account.apiId') }}</label>
                         <input v-model="form.api_id" type="text" class="form-input" placeholder="12345678" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">API Hash *</label>
+                        <label class="form-label">{{ t('modal.account.apiHash') }}</label>
                         <input v-model="form.api_hash" type="text" class="form-input" placeholder="abcdef123456..." required>
                     </div>
                 </div>
@@ -48,43 +48,43 @@ const AccountModalComponent = {
                 </small>
 
                 <details style="margin: 15px 0;">
-                    <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Device Settings</summary>
+                    <summary style="cursor: pointer; color: #667eea; font-weight: 600;">{{ t('modal.account.device.settings') }}</summary>
                     <div style="padding: 15px 0;">
                         <div class="form-group">
-                            <label class="form-label">Device Model</label>
+                            <label class="form-label">{{ t('modal.account.device') }}</label>
                             <input v-model="form.device_model" type="text" class="form-input" placeholder="MS-7C75">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">System Version</label>
+                            <label class="form-label">{{ t('modal.account.system') }}</label>
                             <input v-model="form.system_version" type="text" class="form-input" placeholder="Windows 10">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">App Version</label>
+                            <label class="form-label">{{ t('modal.account.app') }}</label>
                             <input v-model="form.app_version" type="text" class="form-input" placeholder="4.8.3">
                         </div>
                     </div>
                 </details>
 
                 <details style="margin: 15px 0;">
-                    <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Proxy Settings (Optional)</summary>
+                    <summary style="cursor: pointer; color: #667eea; font-weight: 600;">{{ t('modal.account.proxy') }}</summary>
                     <div style="padding: 15px 0;">
                         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
                             <div class="form-group">
-                                <label class="form-label">Proxy Host</label>
+                                <label class="form-label">{{ t('modal.account.proxy.host') }}</label>
                                 <input v-model="form.proxy.host" type="text" class="form-input" placeholder="proxy.example.com">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Port</label>
+                                <label class="form-label">{{ t('modal.account.proxy.port') }}</label>
                                 <input v-model.number="form.proxy.port" type="number" class="form-input" placeholder="1080">
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div class="form-group">
-                                <label class="form-label">Username</label>
+                                <label class="form-label">{{ t('modal.account.proxy.user') }}</label>
                                 <input v-model="form.proxy.username" type="text" class="form-input">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">Password</label>
+                                <label class="form-label">{{ t('modal.account.proxy.pass') }}</label>
                                 <input v-model="form.proxy.password" type="password" class="form-input">
                             </div>
                         </div>
@@ -92,9 +92,9 @@ const AccountModalComponent = {
                 </details>
 
                 <div class="modal-footer">
-                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">Cancel</button>
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">{{ t('modal.account.cancel') }}</button>
                     <button @click="handleSave" class="btn btn-primary" :disabled="loading">
-                        {{ loading ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Account') }}
+                        {{ loading ? t('modal.account.saving') : t(isEdit ? 'modal.account.save.edit' : 'modal.account.save') }}
                     </button>
                 </div>
             </div>
@@ -121,6 +121,9 @@ const AccountModalComponent = {
         this.initializeForm();
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         initializeForm() {
             const defaults = {
                 api_id: this.user?.default_api_id || '2040',

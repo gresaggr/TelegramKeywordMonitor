@@ -5,7 +5,7 @@ const StatsSectionComponent = {
             <div class="stat-card">
                 <div class="stat-header">
                     <div>
-                        <div class="stat-label">Total Accounts</div>
+                        <div class="stat-label">{{ t('stats.accounts') }}</div>
                         <div class="stat-value">{{ totalAccounts }}</div>
                     </div>
                     <div class="stat-icon" style="background: #bee3f8;">
@@ -19,7 +19,7 @@ const StatsSectionComponent = {
             <div class="stat-card">
                 <div class="stat-header">
                     <div>
-                        <div class="stat-label">Monitoring Tasks</div>
+                        <div class="stat-label">{{ t('stats.tasks') }}</div>
                         <div class="stat-value">{{ totalTasks }}</div>
                     </div>
                     <div class="stat-icon" style="background: #c6f6d5;">
@@ -33,7 +33,7 @@ const StatsSectionComponent = {
             <div class="stat-card">
                 <div class="stat-header">
                     <div>
-                        <div class="stat-label">Issues</div>
+                        <div class="stat-label">{{ t('stats.errors') }}</div>
                         <div class="stat-value">{{ errorCount }}</div>
                     </div>
                     <div class="stat-icon" style="background: #fed7d7;">
@@ -45,5 +45,10 @@ const StatsSectionComponent = {
             </div>
         </div>
     `,
-    props: ['totalAccounts', 'totalTasks', 'errorCount']
+    props: ['totalAccounts', 'totalTasks', 'errorCount'],
+    methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        }
+    }
 };

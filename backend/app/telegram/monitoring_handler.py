@@ -80,6 +80,15 @@ class MonitoringHandler:
                     return True
         return False
 
+    @staticmethod
+    def _get_message_link(message: Message) -> str:
+        """Generate link to original message"""
+        if message.chat.username:
+            return f"https://t.me/{message.chat.username}/{message.id}"
+        else:
+            chat_id = str(message.chat.id).replace('-100', '')
+            return f"https://t.me/c/{chat_id}/{message.id}"
+
     async def create_message_handler(
             self,
             account_id: int,
@@ -124,6 +133,11 @@ class MonitoringHandler:
                         if self._check_message_match(text, whitelist, blacklist):
                             # Apply replacements
                             modified_text = self._apply_replacements(text, replacements)
+
+                            # Add source link if enabled
+                            if task.include_source_link:
+                                source_link = self._get_message_link(message)
+                                modified_text += f"\n\nпереслано с {source_link}"
 
                             # Forward message
                             forward_chat_id = (

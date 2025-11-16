@@ -7,8 +7,8 @@ const RegisterComponent = {
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
                 </div>
-                <h1 class="auth-title">Create Account</h1>
-                <p class="auth-subtitle">Join Website Monitor</p>
+                <h1 class="auth-title">{{ t('auth.createAccount') }}</h1>
+                <p class="auth-subtitle">{{ t('app.title') }}</p>
 
                 <div v-if="error" class="alert alert-error">
                     <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
@@ -18,7 +18,7 @@ const RegisterComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">{{ t('auth.email') }}</label>
                     <input
                         v-model="email"
                         type="email"
@@ -29,7 +29,7 @@ const RegisterComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Username</label>
+                    <label class="form-label">{{ t('auth.username') }}</label>
                     <input
                         v-model="username"
                         type="text"
@@ -40,7 +40,7 @@ const RegisterComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Password</label>
+                    <label class="form-label">{{ t('auth.password') }}</label>
                     <input
                         v-model="password"
                         type="password"
@@ -51,7 +51,7 @@ const RegisterComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Confirm Password</label>
+                    <label class="form-label">{{ t('auth.confirmPassword') }}</label>
                     <input
                         v-model="confirmPassword"
                         type="password"
@@ -63,12 +63,12 @@ const RegisterComponent = {
                 </div>
 
                 <button @click="submit" :disabled="loading" class="btn btn-primary">
-                    {{ loading ? 'Creating account...' : 'Create Account' }}
+                    {{ loading ? t('auth.creatingAccount') : t('auth.createAccount') }}
                 </button>
 
                 <div class="auth-switch">
-                    Already have an account?
-                    <a @click="$emit('switch-to-login')" class="auth-link">Sign in</a>
+                    {{ t('auth.haveAccount') }}
+                    <a @click="$emit('switch-to-login')" class="auth-link">{{ t('auth.switchToLogin') }}</a>
                 </div>
             </div>
         </div>
@@ -83,6 +83,9 @@ const RegisterComponent = {
         };
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         submit() {
             if (this.password !== this.confirmPassword) {
                 alert('Passwords do not match');

@@ -8,18 +8,18 @@ const TaskItemComponent = {
                         {{ task.name }}
                         <span :class="task.is_active ? 'status-badge status-active' : 'status-badge status-stopped'" 
                               style="margin-left: 8px; font-size: 11px;">
-                            {{ task.is_active ? 'Active' : 'Inactive' }}
+                            {{ t(task.is_active ? 'task.status.active' : 'task.status.inactive') }}
                         </span>
                     </div>
                     
                     <div v-if="isExpanded" class="site-info-grid" style="margin-top: 8px;">
-                        <div class="site-info-label">Channels:</div>
+                        <div class="site-info-label">{{ t('task.channels') }}</div>
                         <div class="site-info-value">{{ task.monitored_channels.join(', ') }}</div>
                         
-                        <div class="site-info-label">Forward to:</div>
+                        <div class="site-info-label">{{ t('task.forwardTo') }}</div>
                         <div class="site-info-value">{{ task.forward_to_chat_id }}</div>
                         
-                        <div class="site-info-label">Whitelist:</div>
+                        <div class="site-info-label">{{ t('task.keywords.white') }}</div>
                         <div class="site-info-value">
                             <template v-if="task.whitelist_keywords.length > 0">
                                 {{ task.whitelist_keywords.join(', ') }}
@@ -27,7 +27,7 @@ const TaskItemComponent = {
                             <template v-else>All messages</template>
                         </div>
                         
-                        <div class="site-info-label">Blacklist:</div>
+                        <div class="site-info-label">{{ t('task.keywords.black') }}</div>
                         <div class="site-info-value">
                             <template v-if="task.blacklist_keywords.length > 0">
                                 {{ task.blacklist_keywords.join(', ') }}
@@ -37,7 +37,7 @@ const TaskItemComponent = {
                     </div>
                     
                     <button @click="isExpanded = !isExpanded" class="btn-toggle-details" style="margin-top: 8px;">
-                        <span>{{ isExpanded ? 'Hide details' : 'Show details' }}</span>
+                        <span>{{ t(isExpanded ? 'task.details.hide' : 'task.details.show') }}</span>
                         <svg viewBox="0 0 24 24" :class="{ 'rotate-180': isExpanded }">
                             <path d="M7 10l5 5 5-5z"/>
                         </svg>
@@ -48,7 +48,7 @@ const TaskItemComponent = {
                     <button v-if="task.is_active"
                             @click="$emit('stop')" 
                             class="btn-icon" 
-                            title="Stop Task">
+                            :title="t('task.actions.stop')">
                         <svg viewBox="0 0 24 24">
                             <path d="M6 6h12v12H6z"/>
                         </svg>
@@ -56,17 +56,17 @@ const TaskItemComponent = {
                     <button v-else
                             @click="$emit('start')" 
                             class="btn-icon" 
-                            title="Start Task">
+                            :title="t('task.actions.start')">
                         <svg viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z"/>
                         </svg>
                     </button>
-                    <button @click="$emit('edit')" class="btn-icon" title="Edit Task">
+                    <button @click="$emit('edit')" class="btn-icon" :title="t('task.actions.edit')">
                         <svg viewBox="0 0 24 24">
                             <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                         </svg>
                     </button>
-                    <button @click="$emit('delete')" class="btn-icon btn-icon-danger" title="Delete Task">
+                    <button @click="$emit('delete')" class="btn-icon btn-icon-danger" :title="t('task.actions.delete')">
                         <svg viewBox="0 0 24 24">
                             <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                         </svg>
@@ -80,5 +80,10 @@ const TaskItemComponent = {
         return {
             isExpanded: false
         };
+    },
+    methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        }
     }
 };

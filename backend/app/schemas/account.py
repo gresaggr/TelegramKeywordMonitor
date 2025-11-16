@@ -18,6 +18,7 @@ class MonitoringTaskBase(BaseModel):
     monitored_channels: List[str] = Field(default_factory=list)
     forward_to_chat_id: str
     replacements: Dict[str, str] = Field(default_factory=dict)
+    include_source_link: bool = False
 
 
 class MonitoringTaskCreate(MonitoringTaskBase):
@@ -31,6 +32,7 @@ class MonitoringTaskUpdate(BaseModel):
     monitored_channels: Optional[List[str]] = None
     forward_to_chat_id: Optional[str] = None
     replacements: Optional[Dict[str, str]] = None
+    include_source_link: Optional[bool] = None
     is_active: Optional[bool] = None
 
 
@@ -43,6 +45,7 @@ class MonitoringTaskResponse(BaseModel):
     monitored_channels: List[str]
     forward_to_chat_id: str
     replacements: Dict[str, str]
+    include_source_link: bool
     is_active: bool
     created_at: datetime
 

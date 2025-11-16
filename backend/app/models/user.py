@@ -15,6 +15,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     default_telegram_chat_id = Column(String, nullable=True)
     admin_notification_chat_id = Column(String, nullable=True)
+    language = Column(String, default="en", nullable=False)
 
     # Default Telegram account settings
     default_api_id = Column(String, nullable=True, default="2040")

@@ -5,7 +5,7 @@ const TaskModalComponent = {
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2 class="modal-title">{{ isEdit ? 'Edit Monitoring Task' : 'Add Monitoring Task' }}</h2>
+                    <h2 class="modal-title">{{ t(isEdit ? 'modal.task.title.edit' : 'modal.task.title.add') }}</h2>
                     <button @click="$emit('close')" class="btn-close">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -21,55 +21,63 @@ const TaskModalComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Task Name *</label>
+                    <label class="form-label">{{ t('modal.task.name') }}</label>
                     <input v-model="form.name" type="text" class="form-input" placeholder="e.g., Биржа, Игры, Новости" required>
                     <small style="color: #718096; font-size: 12px;">Give this monitoring task a descriptive name</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Whitelist Keywords</label>
+                    <label class="form-label">{{ t('modal.task.whitelist') }}</label>
                     <textarea v-model="whitelistInput" class="form-textarea" 
                               placeholder="Enter keywords, one per line (leave empty to accept all messages)" rows="3"></textarea>
                     <small style="color: #718096; font-size: 12px;">Messages must contain at least one of these words</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Blacklist Keywords</label>
+                    <label class="form-label">{{ t('modal.task.blacklist') }}</label>
                     <textarea v-model="blacklistInput" class="form-textarea" 
                               placeholder="Enter keywords to exclude, one per line" rows="3"></textarea>
                     <small style="color: #718096; font-size: 12px;">Messages containing these words will be skipped</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Monitored Channels * (max 5)</label>
+                    <label class="form-label">{{ t('modal.task.channels') }}</label>
                     <textarea v-model="channelsInput" class="form-textarea" rows="4" required
                               placeholder="Enter channel IDs or usernames, one per line
 Example:
 @channelname
 -1001234567890"></textarea>
-                    <small style="color: #718096; font-size: 12px;">Channel IDs (numeric) or usernames (@username). Maximum 5 channels.</small>
+                    <small style="color: #718096; font-size: 12px;">*****</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Forward To Chat ID *</label>
+                    <label class="form-label">{{ t('modal.task.forward') }}</label>
                     <input v-model="form.forward_to_chat_id" type="text" class="form-input" placeholder="-1001234567890 or @username" required>
-                    <small style="color: #718096; font-size: 12px;">Destination channel/chat for forwarded messages</small>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.forwardHint') }}</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Text Replacements</label>
+                    <label class="form-label">{{ t('modal.task.replacements') }}</label>
                     <textarea v-model="replacementsInput" class="form-textarea" rows="4"
                               placeholder="Enter replacements in format: old_text -> new_text
 Example:
 spam -> ⭐️
 bad_word -> ***"></textarea>
-                    <small style="color: #718096; font-size: 12px;">Replace specific text in messages (one per line: old -> new)</small>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.replacementsHint') }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input v-model="form.include_source_link" type="checkbox" style="margin-right: 10px;">
+                        <span>{{ t('modal.task.includeLink') }}</span>
+                    </label>
+                    <small style="color: #718096; font-size: 12px;">{{ t('modal.task.includeLinkHint') }}</small>
                 </div>
 
                 <div class="modal-footer">
-                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">Cancel</button>
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">{{ t('modal.task.cancel') }}</button>
                     <button @click="handleSave" class="btn btn-primary" :disabled="loading">
-                        {{ loading ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Task') }}
+                        {{ loading ? 'Saving...' : t(isEdit ? 'modal.task.save.edit' : 'modal.task.save') }}
                     </button>
                 </div>
             </div>
@@ -90,7 +98,8 @@ bad_word -> ***"></textarea>
                 blacklist_keywords: [],
                 monitored_channels: [],
                 forward_to_chat_id: '',
-                replacements: {}
+                replacements: {},
+                include_source_link: false
             }
         };
     },
@@ -98,6 +107,9 @@ bad_word -> ***"></textarea>
         this.initializeForm();
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         initializeForm() {
             if (this.isEdit && this.task) {
                 this.form = {...this.task};

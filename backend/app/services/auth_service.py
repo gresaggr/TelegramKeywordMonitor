@@ -27,6 +27,7 @@ class AuthService:
             username=user_data.username,
             hashed_password=get_password_hash(user_data.password),
             balance=0.0,
+            language="en",
             default_api_id="2040",
             default_api_hash="b18441a1ff607e10a989891a5462e627",
             default_device_model="MS-7C75",
@@ -80,6 +81,10 @@ class AuthService:
             user.default_app_version = user_data.default_app_version
         if user_data.default_forward_to_chat_id is not None:
             user.default_forward_to_chat_id = user_data.default_forward_to_chat_id
+        if user_data.language is not None:
+            if user_data.language not in ["en", "ru"]:
+                raise ValueError("Invalid language. Must be 'en' or 'ru'")
+            user.language = user_data.language
 
         await db.commit()
         await db.refresh(user)

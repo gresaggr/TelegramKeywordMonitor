@@ -29,12 +29,12 @@ const TelegramDashboardComponent = {
                 ></stats-section-component>
 
                 <div class="website-header">
-                    <h2 class="website-title">Telegram Accounts ({{ accounts.length }}/5)</h2>
+                    <h2 class="website-title">{{ t('accounts.title') }} ({{ accounts.length }}/5)</h2>
                     <button @click="handleAddAccountClick" class="btn btn-primary btn-add-website">
                         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor; margin-right: 8px;">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
-                        Add Account
+                        {{ t('accounts.add') }}
                     </button>
                 </div>
 
@@ -44,10 +44,10 @@ const TelegramDashboardComponent = {
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6z"/>
                         </svg>
                     </div>
-                    <h3>No accounts yet</h3>
-                    <p>Add your first Telegram account to start monitoring channels</p>
+                    <h3>{{ t('accounts.empty.title') }}</h3>
+                    <p>{{ t('accounts.empty.desc') }}</p>
                     <button @click="handleAddAccountClick" class="btn btn-primary" style="width: auto; padding: 12px 32px;">
-                        Add Your First Account
+                        {{ t('accounts.empty.button') }}
                     </button>
                 </div>
 
@@ -136,9 +136,12 @@ const TelegramDashboardComponent = {
         }
     },
     methods: {
+        t(key) {
+            return window.t ? window.t(key) : key;
+        },
         handleAddAccountClick() {
             if (this.accounts.length >= 5) {
-                alert('Maximum number of accounts (5) reached. Please delete an existing account to add a new one.');
+                alert(this.t('error.max.accounts'));
                 return;
             }
             this.editingAccount = null;
@@ -164,7 +167,7 @@ const TelegramDashboardComponent = {
         },
 
         async handleDelete(accountId) {
-            if (confirm('Are you sure you want to delete this account? This will stop monitoring and delete all tasks.')) {
+            if (confirm(this.t('confirm.delete.account'))) {
                 this.$emit('delete-account', accountId);
             }
         },
@@ -174,7 +177,7 @@ const TelegramDashboardComponent = {
         },
 
         async handleStop(accountId) {
-            if (confirm('Stop monitoring this account?')) {
+            if (confirm(this.t('confirm.stop.account'))) {
                 this.$emit('stop-account', accountId);
             }
         },
@@ -207,7 +210,7 @@ const TelegramDashboardComponent = {
                     `[${new Date(n.created_at).toLocaleString()}] ${n.message}`
                 ).join('\n\n');
 
-                alert(`Notifications for ${account.name || account.phone_number}:\n\n${messages || 'No notifications'}`);
+                alert(`${this.t('notifications.title')} ${account.name || account.phone_number}:\n\n${messages || 'No notifications'}`);
 
                 for (const n of notifications) {
                     if (!n.is_read) {
@@ -228,7 +231,7 @@ const TelegramDashboardComponent = {
 
         handleAddTask(account) {
             if (account.monitoring_tasks.length >= 5) {
-                alert('Maximum number of monitoring tasks (5) reached for this account.');
+                alert(this.t('error.max.tasks'));
                 return;
             }
             this.currentAccountId = account.id;
@@ -271,7 +274,7 @@ const TelegramDashboardComponent = {
         },
 
         async handleStopTask(accountId, taskId) {
-            if (confirm('Stop this monitoring task?')) {
+            if (confirm(this.t('confirm.stop.task'))) {
                 try {
                     await taskService.stopTask(accountId, taskId);
                     uiHelpers.showToast('Task stopped successfully!');
@@ -283,7 +286,7 @@ const TelegramDashboardComponent = {
         },
 
         async handleDeleteTask(accountId, taskId) {
-            if (confirm('Are you sure you want to delete this monitoring task?')) {
+            if (confirm(this.t('confirm.delete.task'))) {
                 try {
                     await taskService.deleteTask(accountId, taskId);
                     uiHelpers.showToast('Task deleted successfully!');
