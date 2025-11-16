@@ -6,6 +6,7 @@ from app.db.session import get_async_session
 from app.models.user import User
 from app.schemas.account import (
     TelegramAccountCreate,
+    TelegramAccountUpdate,
     TelegramAccountResponse,
     VerifyCodeRequest,
     AccountNotificationResponse,
@@ -96,6 +97,23 @@ async def get_account(
         return await AccountService.get_account(account_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch("/{account_id}", response_model=TelegramAccountResponse)
+async def update_account(
+        account_id: int,
+        account_data: TelegramAccountUpdate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
+):
+    """Update a Telegram account"""
+    try:
+        return await AccountService.update_account(account_id, account_data, current_user, db)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error updating account {account_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.post("/{account_id}/start", response_model=TelegramAccountResponse)
@@ -205,6 +223,34 @@ async def update_monitoring_task(
             )
 
         return await AccountService.update_monitoring_task(account_id, task_id, task_data, current_user, db)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/{account_id}/tasks/{task_id}/start", response_model=MonitoringTaskResponse)
+async def start_monitoring_task(
+        account_id: int,
+        task_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
+):
+    """Start a monitoring task"""
+    try:
+        return await AccountService.start_monitoring_task(account_id, task_id, current_user, db)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/{account_id}/tasks/{task_id}/stop", response_model=MonitoringTaskResponse)
+async def stop_monitoring_task(
+        account_id: int,
+        task_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
+):
+    """Stop a monitoring task"""
+    try:
+        return await AccountService.stop_monitoring_task(account_id, task_id, current_user, db)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 

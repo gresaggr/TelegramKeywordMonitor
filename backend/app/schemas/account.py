@@ -58,10 +58,21 @@ class TelegramAccountBase(BaseModel):
     system_version: Optional[str] = "Linux"
     app_version: Optional[str] = "1.0.0"
     proxy: Optional[ProxySettings] = None
+    name: Optional[str] = None
 
 
 class TelegramAccountCreate(TelegramAccountBase):
     pass
+
+
+class TelegramAccountUpdate(BaseModel):
+    name: Optional[str] = None
+    api_id: Optional[str] = None
+    api_hash: Optional[str] = None
+    device_model: Optional[str] = None
+    system_version: Optional[str] = None
+    app_version: Optional[str] = None
+    proxy: Optional[ProxySettings] = None
 
 
 class AccountNotificationResponse(BaseModel):
@@ -78,6 +89,7 @@ class AccountNotificationResponse(BaseModel):
 class TelegramAccountResponse(BaseModel):
     id: int
     phone_number: str
+    name: Optional[str]
     status: AccountStatus
     is_active: bool
     error_message: Optional[str]

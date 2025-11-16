@@ -22,6 +22,7 @@ class TelegramAccount(Base):
 
     # Authentication
     phone_number = Column(String, nullable=False)
+    name = Column(String, nullable=True)
     api_id = Column(String, nullable=False)
     api_hash = Column(String, nullable=False)
     phone_code_hash = Column(String, nullable=True)

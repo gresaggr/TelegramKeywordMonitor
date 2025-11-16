@@ -3,7 +3,7 @@ const AccountModalComponent = {
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
-                    <h2 class="modal-title">Add Telegram Account</h2>
+                    <h2 class="modal-title">{{ isEdit ? 'Edit Telegram Account' : 'Add Telegram Account' }}</h2>
                     <button @click="$emit('close')" class="btn-close">
                         <svg viewBox="0 0 24 24">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -17,108 +17,122 @@ const AccountModalComponent = {
                     </svg>
                     <span>{{ error }}</span>
                 </div>
+                
                 <h3 style="margin: 20px 0 15px; color: #1a202c;">Authentication</h3>
+                
                 <div class="form-group">
-                <label class="form-label">Phone Number *</label>
-                <input
-                    v-model="form.phone_number"
-                    type="tel"
-                    class="form-input"
-                    placeholder="+1234567890"
-                    required
-                >
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                <div class="form-group">
-                    <label class="form-label">API ID *</label>
+                    <label class="form-label">Account Name</label>
                     <input
-                        v-model="form.api_id"
+                        v-model="form.name"
                         type="text"
                         class="form-input"
-                        placeholder="12345678"
-                        required
+                        placeholder="My Account"
                     >
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">API Hash *</label>
+                    <label class="form-label">Phone Number *</label>
                     <input
-                        v-model="form.api_hash"
-                        type="text"
+                        v-model="form.phone_number"
+                        type="tel"
                         class="form-input"
-                        placeholder="abcdef123456..."
+                        placeholder="+1234567890"
+                        :disabled="isEdit"
                         required
                     >
                 </div>
-            </div>
 
-            <small style="color: #718096; font-size: 12px; display: block; margin: 10px 0;">
-                Get your API credentials from <a href="https://my.telegram.org" target="_blank" style="color: #667eea;">my.telegram.org</a>
-            </small>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">API ID *</label>
+                        <input
+                            v-model="form.api_id"
+                            type="text"
+                            class="form-input"
+                            placeholder="12345678"
+                            required
+                        >
+                    </div>
 
-            <details style="margin: 15px 0;">
-                <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Device Settings</summary>
-                <div style="padding: 15px 0;">
                     <div class="form-group">
-                        <label class="form-label">Device Model</label>
-                        <input v-model="form.device_model" type="text" class="form-input" placeholder="MS-7C75">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">System Version</label>
-                        <input v-model="form.system_version" type="text" class="form-input" placeholder="Windows 10">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">App Version</label>
-                        <input v-model="form.app_version" type="text" class="form-input" placeholder="4.8.3">
+                        <label class="form-label">API Hash *</label>
+                        <input
+                            v-model="form.api_hash"
+                            type="text"
+                            class="form-input"
+                            placeholder="abcdef123456..."
+                            required
+                        >
                     </div>
                 </div>
-            </details>
 
-            <details style="margin: 15px 0;">
-                <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Proxy Settings (Optional)</summary>
-                <div style="padding: 15px 0;">
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                <small style="color: #718096; font-size: 12px; display: block; margin: 10px 0;">
+                    Get your API credentials from <a href="https://my.telegram.org" target="_blank" style="color: #667eea;">my.telegram.org</a>
+                </small>
+
+                <details style="margin: 15px 0;">
+                    <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Device Settings</summary>
+                    <div style="padding: 15px 0;">
                         <div class="form-group">
-                            <label class="form-label">Proxy Host</label>
-                            <input v-model="form.proxy.host" type="text" class="form-input" placeholder="proxy.example.com">
+                            <label class="form-label">Device Model</label>
+                            <input v-model="form.device_model" type="text" class="form-input" placeholder="MS-7C75">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Port</label>
-                            <input v-model.number="form.proxy.port" type="number" class="form-input" placeholder="1080">
-                        </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="form-group">
-                            <label class="form-label">Username</label>
-                            <input v-model="form.proxy.username" type="text" class="form-input">
+                            <label class="form-label">System Version</label>
+                            <input v-model="form.system_version" type="text" class="form-input" placeholder="Windows 10">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Password</label>
-                            <input v-model="form.proxy.password" type="password" class="form-input">
+                            <label class="form-label">App Version</label>
+                            <input v-model="form.app_version" type="text" class="form-input" placeholder="4.8.3">
                         </div>
                     </div>
+                </details>
+
+                <details style="margin: 15px 0;">
+                    <summary style="cursor: pointer; color: #667eea; font-weight: 600;">Proxy Settings (Optional)</summary>
+                    <div style="padding: 15px 0;">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label class="form-label">Proxy Host</label>
+                                <input v-model="form.proxy.host" type="text" class="form-input" placeholder="proxy.example.com">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Port</label>
+                                <input v-model.number="form.proxy.port" type="number" class="form-input" placeholder="1080">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label class="form-label">Username</label>
+                                <input v-model="form.proxy.username" type="text" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Password</label>
+                                <input v-model="form.proxy.password" type="password" class="form-input">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="modal-footer">
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">
+                        Cancel
+                    </button>
+                    <button @click="handleSave" class="btn btn-primary" :disabled="loading">
+                        {{ loading ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Account') }}
+                    </button>
                 </div>
-            </details>
-
-            <div class="modal-footer">
-                <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">
-                    Cancel
-                </button>
-                <button @click="handleSave" class="btn btn-primary" :disabled="loading">
-                    {{ loading ? 'Creating...' : 'Create Account' }}
-                </button>
             </div>
         </div>
-    </div>
-`,
-    props: ['user'],
+    `,
+    props: ['user', 'account', 'isEdit'],
     data() {
         return {
             loading: false,
             error: '',
             overlayClicked: false,
             form: {
+                name: '',
                 phone_number: '',
                 api_id: '',
                 api_hash: '',
@@ -135,7 +149,15 @@ const AccountModalComponent = {
         };
     },
     created() {
-        if (this.user) {
+        if (this.isEdit && this.account) {
+            this.form.name = this.account.name || '';
+            this.form.phone_number = this.account.phone_number;
+            this.form.api_id = this.account.api_id || this.user?.default_api_id || '2040';
+            this.form.api_hash = this.account.api_hash || this.user?.default_api_hash || 'b18441a1ff607e10a989891a5462e627';
+            this.form.device_model = this.account.device_model || this.user?.default_device_model || 'MS-7C75';
+            this.form.system_version = this.account.system_version || this.user?.default_system_version || 'Windows 10';
+            this.form.app_version = this.account.app_version || this.user?.default_app_version || '4.8.3';
+        } else if (this.user) {
             this.form.api_id = this.user.default_api_id || '2040';
             this.form.api_hash = this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627';
             this.form.device_model = this.user.default_device_model || 'MS-7C75';
@@ -156,7 +178,7 @@ const AccountModalComponent = {
         async handleSave() {
             this.error = '';
 
-            if (!this.form.phone_number || !this.form.api_id || !this.form.api_hash) {
+            if (!this.isEdit && (!this.form.phone_number || !this.form.api_id || !this.form.api_hash)) {
                 this.error = 'Please fill in phone number, API ID and API Hash';
                 return;
             }

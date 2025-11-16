@@ -78,6 +78,13 @@ const api = {
         });
     },
 
+    async updateTelegramAccount(id, data) {
+        return this.call(`/accounts/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    },
+
     async verifyCode(accountId, code, twoFaPassword = null) {
         return this.call('/accounts/verify-code', {
             method: 'POST',
@@ -129,6 +136,18 @@ const api = {
         return this.call(`/accounts/${accountId}/tasks/${taskId}`, {
             method: 'PATCH',
             body: JSON.stringify(data)
+        });
+    },
+
+    async startMonitoringTask(accountId, taskId) {
+        return this.call(`/accounts/${accountId}/tasks/${taskId}/start`, {
+            method: 'POST'
+        });
+    },
+
+    async stopMonitoringTask(accountId, taskId) {
+        return this.call(`/accounts/${accountId}/tasks/${taskId}/stop`, {
+            method: 'POST'
         });
     },
 

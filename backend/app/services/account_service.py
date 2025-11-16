@@ -7,6 +7,7 @@ from app.models.account import TelegramAccount, AccountStatus, AccountNotificati
 from app.models.user import User
 from app.schemas.account import (
     TelegramAccountCreate,
+    TelegramAccountUpdate,
     TelegramAccountResponse,
     AccountNotificationResponse,
     MonitoringTaskCreate,
@@ -40,6 +41,7 @@ class AccountService:
         new_account = TelegramAccount(
             user_id=user.id,
             phone_number=account_data.phone_number,
+            name=account_data.name,
             api_id=account_data.api_id,
             api_hash=account_data.api_hash,
             device_model=account_data.device_model,
@@ -73,6 +75,46 @@ class AccountService:
             new_account.error_message = str(e)
             await db.commit()
             raise
+
+    @staticmethod
+    async def update_account(
+            account_id: int,
+            account_data: TelegramAccountUpdate,
+            user: User,
+            db: AsyncSession
+    ) -> TelegramAccountResponse:
+        """Update account settings"""
+        result = await db.execute(
+            select(TelegramAccount).where(
+                TelegramAccount.id == account_id,
+                TelegramAccount.user_id == user.id
+            )
+        )
+        account = result.scalar_one_or_none()
+        if not account:
+            raise ValueError("Account not found")
+
+        if account_data.name is not None:
+            account.name = account_data.name
+        if account_data.api_id is not None:
+            account.api_id = account_data.api_id
+        if account_data.api_hash is not None:
+            account.api_hash = account_data.api_hash
+        if account_data.device_model is not None:
+            account.device_model = account_data.device_model
+        if account_data.system_version is not None:
+            account.system_version = account_data.system_version
+        if account_data.app_version is not None:
+            account.app_version = account_data.app_version
+        if account_data.proxy is not None:
+            account.proxy_host = account_data.proxy.host
+            account.proxy_port = account_data.proxy.port
+            account.proxy_username = account_data.proxy.username
+            account.proxy_password = account_data.proxy.password
+
+        await db.commit()
+        await db.refresh(account)
+        return await AccountService._to_response(account, db)
 
     @staticmethod
     async def verify_code(
@@ -286,6 +328,71 @@ class AccountService:
         return AccountService._task_to_response(task)
 
     @staticmethod
+    async def start_monitoring_task(account_id: int, task_id: int, user: User, db: AsyncSession) -> MonitoringTaskResponse:
+        """Start a monitoring task"""
+        result = await db.execute(
+            select(TelegramAccount).where(
+                TelegramAccount.id == account_id,
+                TelegramAccount.user_id == user.id
+            )
+        )
+        account = result.scalar_one_or_none()
+        if not account:
+            raise ValueError("Account not found")
+
+        result = await db.execute(
+            select(MonitoringTask).where(
+                MonitoringTask.id == task_id,
+                MonitoringTask.account_id == account_id
+            )
+        )
+        task = result.scalar_one_or_none()
+        if not task:
+            raise ValueError("Monitoring task not found")
+
+        task.is_active = True
+        await db.commit()
+        await db.refresh(task)
+
+        if account.status == AccountStatus.ACTIVE and account.is_active:
+            await telegram_manager.update_monitoring(account_id, db)
+
+        return AccountService._task_to_response(task)
+
+    @staticmethod
+    async def stop_monitoring_task(account_id: int, task_id: int, user: User,
+                                   db: AsyncSession) -> MonitoringTaskResponse:
+        """Stop a monitoring task"""
+        result = await db.execute(
+            select(TelegramAccount).where(
+                TelegramAccount.id == account_id,
+                TelegramAccount.user_id == user.id
+            )
+        )
+        account = result.scalar_one_or_none()
+        if not account:
+            raise ValueError("Account not found")
+
+        result = await db.execute(
+            select(MonitoringTask).where(
+                MonitoringTask.id == task_id,
+                MonitoringTask.account_id == account_id
+            )
+        )
+        task = result.scalar_one_or_none()
+        if not task:
+            raise ValueError("Monitoring task not found")
+
+        task.is_active = False
+        await db.commit()
+        await db.refresh(task)
+
+        if account.status == AccountStatus.ACTIVE and account.is_active:
+            await telegram_manager.update_monitoring(account_id, db)
+
+        return AccountService._task_to_response(task)
+
+    @staticmethod
     async def delete_monitoring_task(account_id: int, task_id: int, user: User, db: AsyncSession):
         """Delete a monitoring task"""
         result = await db.execute(
@@ -350,6 +457,7 @@ class AccountService:
         return TelegramAccountResponse(
             id=account.id,
             phone_number=account.phone_number,
+            name=account.name,
             status=account.status,
             is_active=account.is_active,
             error_message=account.error_message,
@@ -401,6 +509,5 @@ class AccountService:
         if not notification:
             raise ValueError("Notification not found")
 
-        notification = result.scalar_one_or_none()
-        if not notification:
-            raise ValueError("Notification not found")
+        notification.is_read = True
+        await db.commit()
