@@ -1,4 +1,6 @@
+// frontend/js/components/account-modal.js
 const AccountModalComponent = {
+    mixins: [modalMixin],
     template: `
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
@@ -22,47 +24,22 @@ const AccountModalComponent = {
                 
                 <div class="form-group">
                     <label class="form-label">Account Name</label>
-                    <input
-                        v-model="form.name"
-                        type="text"
-                        class="form-input"
-                        placeholder="My Account"
-                    >
+                    <input v-model="form.name" type="text" class="form-input" placeholder="My Account">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Phone Number *</label>
-                    <input
-                        v-model="form.phone_number"
-                        type="tel"
-                        class="form-input"
-                        placeholder="+1234567890"
-                        :disabled="isEdit"
-                        required
-                    >
+                    <input v-model="form.phone_number" type="tel" class="form-input" placeholder="+1234567890" :disabled="isEdit" required>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label class="form-label">API ID *</label>
-                        <input
-                            v-model="form.api_id"
-                            type="text"
-                            class="form-input"
-                            placeholder="12345678"
-                            required
-                        >
+                        <input v-model="form.api_id" type="text" class="form-input" placeholder="12345678" required>
                     </div>
-
                     <div class="form-group">
                         <label class="form-label">API Hash *</label>
-                        <input
-                            v-model="form.api_hash"
-                            type="text"
-                            class="form-input"
-                            placeholder="abcdef123456..."
-                            required
-                        >
+                        <input v-model="form.api_hash" type="text" class="form-input" placeholder="abcdef123456..." required>
                     </div>
                 </div>
 
@@ -115,9 +92,7 @@ const AccountModalComponent = {
                 </details>
 
                 <div class="modal-footer">
-                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">
-                        Cancel
-                    </button>
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">Cancel</button>
                     <button @click="handleSave" class="btn btn-primary" :disabled="loading">
                         {{ loading ? 'Saving...' : (isEdit ? 'Save Changes' : 'Create Account') }}
                     </button>
@@ -130,7 +105,6 @@ const AccountModalComponent = {
         return {
             loading: false,
             error: '',
-            overlayClicked: false,
             form: {
                 name: '',
                 phone_number: '',
@@ -139,42 +113,39 @@ const AccountModalComponent = {
                 device_model: 'MS-7C75',
                 system_version: 'Windows 10',
                 app_version: '4.8.3',
-                proxy: {
-                    host: '',
-                    port: null,
-                    username: '',
-                    password: ''
-                }
+                proxy: {host: '', port: null, username: '', password: ''}
             }
         };
     },
     created() {
-        if (this.isEdit && this.account) {
-            this.form.name = this.account.name || '';
-            this.form.phone_number = this.account.phone_number;
-            this.form.api_id = this.account.api_id || this.user?.default_api_id || '2040';
-            this.form.api_hash = this.account.api_hash || this.user?.default_api_hash || 'b18441a1ff607e10a989891a5462e627';
-            this.form.device_model = this.account.device_model || this.user?.default_device_model || 'MS-7C75';
-            this.form.system_version = this.account.system_version || this.user?.default_system_version || 'Windows 10';
-            this.form.app_version = this.account.app_version || this.user?.default_app_version || '4.8.3';
-        } else if (this.user) {
-            this.form.api_id = this.user.default_api_id || '2040';
-            this.form.api_hash = this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627';
-            this.form.device_model = this.user.default_device_model || 'MS-7C75';
-            this.form.system_version = this.user.default_system_version || 'Windows 10';
-            this.form.app_version = this.user.default_app_version || '4.8.3';
-        }
+        this.initializeForm();
     },
     methods: {
-        handleOverlayClick() {
-            this.overlayClicked = true;
-        },
-        handleOverlayRelease() {
-            if (this.overlayClicked) {
-                this.$emit('close');
+        initializeForm() {
+            const defaults = {
+                api_id: this.user?.default_api_id || '2040',
+                api_hash: this.user?.default_api_hash || 'b18441a1ff607e10a989891a5462e627',
+                device_model: this.user?.default_device_model || 'MS-7C75',
+                system_version: this.user?.default_system_version || 'Windows 10',
+                app_version: this.user?.default_app_version || '4.8.3'
+            };
+
+            if (this.isEdit && this.account) {
+                this.form = {
+                    name: this.account.name || '',
+                    phone_number: this.account.phone_number,
+                    api_id: this.account.api_id || defaults.api_id,
+                    api_hash: this.account.api_hash || defaults.api_hash,
+                    device_model: this.account.device_model || defaults.device_model,
+                    system_version: this.account.system_version || defaults.system_version,
+                    app_version: this.account.app_version || defaults.app_version,
+                    proxy: {host: '', port: null, username: '', password: ''}
+                };
+            } else {
+                Object.assign(this.form, defaults);
             }
-            this.overlayClicked = false;
         },
+
         async handleSave() {
             this.error = '';
 
@@ -184,14 +155,11 @@ const AccountModalComponent = {
             }
 
             this.loading = true;
-
             try {
                 const data = {...this.form};
-
                 if (!data.proxy || !data.proxy.host) {
                     delete data.proxy;
                 }
-
                 this.$emit('save', data);
             } catch (err) {
                 this.error = err.message || 'Failed to save account';

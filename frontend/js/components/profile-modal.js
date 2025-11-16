@@ -1,5 +1,6 @@
 // frontend/js/components/profile-modal.js
 const ProfileModalComponent = {
+    mixins: [modalMixin],
     template: `
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
@@ -26,47 +27,26 @@ const ProfileModalComponent = {
                     <span>{{ success }}</span>
                 </div>
 
-                <!-- Account Info -->
                 <h3 style="margin: 20px 0 15px; color: #1a202c;">Account Information</h3>
                 
                 <div class="form-group">
                     <label class="form-label">Email (read-only)</label>
-                    <input
-                        :value="user.email"
-                        type="email"
-                        class="form-input"
-                        disabled
-                        style="background: #f7fafc; cursor: not-allowed;"
-                    >
+                    <input :value="user.email" type="email" class="form-input" disabled style="background: #f7fafc; cursor: not-allowed;">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Username (read-only)</label>
-                    <input
-                        :value="user.username"
-                        type="text"
-                        class="form-input"
-                        disabled
-                        style="background: #f7fafc; cursor: not-allowed;"
-                    >
+                    <input :value="user.username" type="text" class="form-input" disabled style="background: #f7fafc; cursor: not-allowed;">
                 </div>
 
-                <!-- Telegram Settings -->
                 <h3 style="margin: 30px 0 15px; color: #1a202c;">Telegram Settings</h3>
 
                 <div class="form-group">
                     <label class="form-label">Default Telegram Chat ID (for error notifications)</label>
-                    <input
-                        v-model="form.default_telegram_chat_id"
-                        type="text"
-                        class="form-input"
-                        placeholder="123456789 or leave empty"
-                    >
+                    <input v-model="form.default_telegram_chat_id" type="text" class="form-input" placeholder="123456789 or leave empty">
                     <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
                         Channel where system error notifications will be sent.
-                        <a href="#" @click.prevent="showTelegramHelp = !showTelegramHelp" style="color: #667eea;">
-                            How to get Chat ID?
-                        </a>
+                        <a href="#" @click.prevent="showTelegramHelp = !showTelegramHelp" style="color: #667eea;">How to get Chat ID?</a>
                     </small>
                     <div v-if="showTelegramHelp" class="alert" style="margin-top: 10px; background: #e6f3ff; border: 1px solid #667eea; color: #2c5282;">
                         <div style="font-size: 12px;">
@@ -81,18 +61,12 @@ const ProfileModalComponent = {
 
                 <div class="form-group">
                     <label class="form-label">Default Forward To Chat ID</label>
-                    <input
-                        v-model="form.default_forward_to_chat_id"
-                        type="text"
-                        class="form-input"
-                        placeholder="-1001234567890 or @username"
-                    >
+                    <input v-model="form.default_forward_to_chat_id" type="text" class="form-input" placeholder="-1001234567890 or @username">
                     <small style="color: #718096; font-size: 12px; display: block; margin-top: 5px;">
                         Default destination for forwarding messages when adding new accounts
                     </small>
                 </div>
 
-                <!-- Default Account Settings -->
                 <h3 style="margin: 30px 0 15px; color: #1a202c;">Default Telegram Account Settings</h3>
                 <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
                     These values will be used by default when adding new Telegram accounts. You can override them for each account.
@@ -101,59 +75,31 @@ const ProfileModalComponent = {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div class="form-group">
                         <label class="form-label">Default API ID</label>
-                        <input
-                            v-model="form.default_api_id"
-                            type="text"
-                            class="form-input"
-                            placeholder="2040"
-                        >
+                        <input v-model="form.default_api_id" type="text" class="form-input" placeholder="2040">
                     </div>
-
                     <div class="form-group">
                         <label class="form-label">Default API Hash</label>
-                        <input
-                            v-model="form.default_api_hash"
-                            type="text"
-                            class="form-input"
-                            placeholder="b18441a1ff607e10a989891a5462e627"
-                        >
+                        <input v-model="form.default_api_hash" type="text" class="form-input" placeholder="b18441a1ff607e10a989891a5462e627">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Default Device Model</label>
-                    <input
-                        v-model="form.default_device_model"
-                        type="text"
-                        class="form-input"
-                        placeholder="MS-7C75"
-                    >
+                    <input v-model="form.default_device_model" type="text" class="form-input" placeholder="MS-7C75">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Default System Version</label>
-                    <input
-                        v-model="form.default_system_version"
-                        type="text"
-                        class="form-input"
-                        placeholder="Windows 10"
-                    >
+                    <input v-model="form.default_system_version" type="text" class="form-input" placeholder="Windows 10">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Default App Version</label>
-                    <input
-                        v-model="form.default_app_version"
-                        type="text"
-                        class="form-input"
-                        placeholder="4.8.3"
-                    >
+                    <input v-model="form.default_app_version" type="text" class="form-input" placeholder="4.8.3">
                 </div>
 
                 <div class="modal-footer">
-                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">
-                        Cancel
-                    </button>
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">Cancel</button>
                     <button @click="handleSave" class="btn btn-primary" :disabled="loading">
                         {{ loading ? 'Saving...' : 'Save Changes' }}
                     </button>
@@ -168,7 +114,6 @@ const ProfileModalComponent = {
             loading: false,
             error: '',
             success: '',
-            overlayClicked: false,
             form: {
                 default_telegram_chat_id: '',
                 default_api_id: '',
@@ -188,8 +133,7 @@ const ProfileModalComponent = {
             handler() {
                 this.initForm();
             },
-            deep: true,
-            immediate: true
+            deep: true
         }
     },
     methods: {
@@ -198,7 +142,7 @@ const ProfileModalComponent = {
                 this.form = {
                     default_telegram_chat_id: this.user.default_telegram_chat_id || '',
                     default_api_id: this.user.default_api_id || '2040',
-                    default_api_hash: this.user.default_api_hash || 'b18441a1ff607e10a9895462e627',
+                    default_api_hash: this.user.default_api_hash || 'b18441a1ff607e10a989891a5462e627',
                     default_device_model: this.user.default_device_model || 'MS-7C75',
                     default_system_version: this.user.default_system_version || 'Windows 10',
                     default_app_version: this.user.default_app_version || '4.8.3',
@@ -206,32 +150,18 @@ const ProfileModalComponent = {
                 };
             }
         },
-        handleOverlayClick() {
-            this.overlayClicked = true;
-        },
-        handleOverlayRelease() {
-            if (this.overlayClicked) {
-                this.$emit('close');
-            }
-            this.overlayClicked = false;
-        },
+
         async handleSave() {
             this.error = '';
             this.success = '';
             this.loading = true;
 
             try {
-                const data = {
-                    default_telegram_chat_id: this.form.default_telegram_chat_id || null,
-                    default_api_id: this.form.default_api_id || null,
-                    default_api_hash: this.form.default_api_hash || null,
-                    default_device_model: this.form.default_device_model || null,
-                    default_system_version: this.form.default_system_version || null,
-                    default_app_version: this.form.default_app_version || null,
-                    default_forward_to_chat_id: this.form.default_forward_to_chat_id || null
-                };
+                const data = Object.fromEntries(
+                    Object.entries(this.form).map(([k, v]) => [k, v || null])
+                );
 
-                await api.updateProfile(data);
+                await authService.updateProfile(data);
                 this.success = 'Profile updated successfully!';
 
                 setTimeout(() => {

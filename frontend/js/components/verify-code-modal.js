@@ -1,4 +1,6 @@
+// frontend/js/components/verify-code-modal.js
 const VerifyCodeModalComponent = {
+    mixins: [modalMixin],
     template: `
         <div class="modal-overlay" @mousedown.self="handleOverlayClick" @mouseup.self="handleOverlayRelease">
             <div class="modal-content" style="max-width: 450px;">
@@ -31,27 +33,14 @@ const VerifyCodeModalComponent = {
 
                 <div class="form-group">
                     <label class="form-label">Verification Code *</label>
-                    <input
-                        v-model="code"
-                        type="text"
-                        class="form-input"
-                        placeholder="12345"
-                        @keyup.enter="handleVerify"
-                        required
-                        autofocus
-                    >
+                    <input v-model="code" type="text" class="form-input" placeholder="12345" @keyup.enter="handleVerify" required autofocus>
                 </div>
 
                 <div v-if="needs2FA" class="form-group">
                     <label class="form-label">Two-Factor Password</label>
                     <div class="password-input-wrapper">
-                        <input
-                            v-model="twoFaPassword"
-                            :type="showPassword ? 'text' : 'password'"
-                            class="form-input"
-                            placeholder="Enter 2FA password"
-                            @keyup.enter="handleVerify"
-                        >
+                        <input v-model="twoFaPassword" :type="showPassword ? 'text' : 'password'" class="form-input" 
+                               placeholder="Enter 2FA password" @keyup.enter="handleVerify">
                         <button @click="showPassword = !showPassword" class="password-toggle" type="button">
                             <svg v-if="!showPassword" viewBox="0 0 24 24" width="20" height="20">
                                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -61,15 +50,11 @@ const VerifyCodeModalComponent = {
                             </svg>
                         </button>
                     </div>
-                    <small style="color: #718096; font-size: 12px;">
-                        Your account has 2FA enabled. Please enter your password.
-                    </small>
+                    <small style="color: #718096; font-size: 12px;">Your account has 2FA enabled. Please enter your password.</small>
                 </div>
 
                 <div class="modal-footer">
-                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">
-                        Cancel
-                    </button>
+                    <button @click="$emit('close')" class="btn btn-secondary" :disabled="loading">Cancel</button>
                     <button @click="handleVerify" class="btn btn-primary" :disabled="loading || !code">
                         {{ loading ? 'Verifying...' : 'Verify' }}
                     </button>
@@ -84,22 +69,12 @@ const VerifyCodeModalComponent = {
             error: '',
             success: '',
             needs2FA: false,
-            overlayClicked: false,
             code: '',
             twoFaPassword: '',
             showPassword: false
         };
     },
     methods: {
-        handleOverlayClick() {
-            this.overlayClicked = true;
-        },
-        handleOverlayRelease() {
-            if (this.overlayClicked) {
-                this.$emit('close');
-            }
-            this.overlayClicked = false;
-        },
         async handleVerify() {
             if (!this.code) {
                 this.error = 'Please enter the verification code';
@@ -111,21 +86,11 @@ const VerifyCodeModalComponent = {
             this.loading = true;
 
             try {
-                await api.verifyCode(
-                    this.account.id,
-                    this.code,
-                    this.twoFaPassword || null
-                );
-
+                await accountService.verifyCode(this.account.id, this.code, this.twoFaPassword || null);
                 this.success = 'Account verified successfully!';
-
-                setTimeout(() => {
-                    this.$emit('verified');
-                }, 1500);
-
+                setTimeout(() => this.$emit('verified'), 1500);
             } catch (err) {
                 this.error = err.message || 'Verification failed';
-
                 if (this.error.includes('2FA') || this.error.includes('password required')) {
                     this.needs2FA = true;
                 }

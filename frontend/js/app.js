@@ -1,12 +1,11 @@
+// frontend/js/app.js
 const {createApp} = Vue;
 
 createApp({
     components: {
         'login-component': LoginComponent,
         'register-component': RegisterComponent,
-        'telegram-dashboard-component': TelegramDashboardComponent,
-        'account-modal-component': AccountModalComponent,
-        'verify-code-modal-component': VerifyCodeModalComponent,
+        'telegram-dashboard-component': TelegramDashboardComponent
     },
     data() {
         return {
@@ -21,11 +20,8 @@ createApp({
     },
     async mounted() {
         await this.checkAuth();
-        // Auto-refresh accounts every 30 seconds
         if (this.isAuthenticated) {
-            setInterval(() => {
-                this.loadAccounts();
-            }, 30000);
+            setInterval(() => this.loadAccounts(), 30000);
         }
     },
     methods: {
@@ -46,17 +42,12 @@ createApp({
         },
 
         async loadUserData() {
-            try {
-                this.user = await api.getCurrentUser();
-            } catch (err) {
-                console.error('Failed to load user data:', err);
-                throw err;
-            }
+            this.user = await authService.getCurrentUser();
         },
 
         async loadAccounts() {
             try {
-                this.accounts = await api.getTelegramAccounts();
+                this.accounts = await accountService.getAccounts();
             } catch (err) {
                 console.error('Failed to load accounts:', err);
                 this.accounts = [];
@@ -66,9 +57,8 @@ createApp({
         async handleLogin(credentials) {
             this.error = '';
             this.loading = true;
-
             try {
-                const data = await api.login(credentials.email, credentials.password);
+                const data = await authService.login(credentials.email, credentials.password);
                 localStorage.setItem('token', data.access_token);
                 await this.loadUserData();
                 await this.loadAccounts();
@@ -83,10 +73,9 @@ createApp({
         async handleRegister(credentials) {
             this.error = '';
             this.loading = true;
-
             try {
-                await api.register(credentials.email, credentials.username, credentials.password);
-                const loginData = await api.login(credentials.email, credentials.password);
+                await authService.register(credentials.email, credentials.username, credentials.password);
+                const loginData = await authService.login(credentials.email, credentials.password);
                 localStorage.setItem('token', loginData.access_token);
                 await this.loadUserData();
                 await this.loadAccounts();
@@ -108,35 +97,24 @@ createApp({
 
         async handleAddAccount(data) {
             try {
-                const account = await api.createTelegramAccount(data);
+                const account = await accountService.createAccount(data);
                 await this.loadAccounts();
 
-                // If account needs verification, show success message
                 if (account.status === 'awaiting_code' || account.status === 'awaiting_2fa') {
-                    this.showSuccess('Account created! Please verify the code sent to your phone.');
+                    uiHelpers.showToast('Account created! Please verify the code sent to your phone.');
                 } else {
-                    this.showSuccess('Account added and monitoring started!');
+                    uiHelpers.showToast('Account added and monitoring started!');
                 }
             } catch (err) {
                 alert('Failed to add account: ' + err.message);
             }
         },
 
-        async handleEditAccount(id, data) {
-            try {
-                await api.updateTelegramAccount(id, data);
-                await this.loadAccounts();
-                this.showSuccess('Account updated successfully!');
-            } catch (err) {
-                alert('Failed to update account: ' + err.message);
-            }
-        },
-
         async handleDeleteAccount(id) {
             try {
-                await api.deleteTelegramAccount(id);
+                await accountService.deleteAccount(id);
                 await this.loadAccounts();
-                this.showSuccess('Account deleted successfully!');
+                uiHelpers.showToast('Account deleted successfully!');
             } catch (err) {
                 alert('Failed to delete account: ' + err.message);
             }
@@ -144,9 +122,9 @@ createApp({
 
         async handleStopAccount(id) {
             try {
-                await api.stopTelegramAccount(id);
+                await accountService.stopAccount(id);
                 await this.loadAccounts();
-                this.showSuccess('Account monitoring stopped!');
+                uiHelpers.showToast('Account monitoring stopped!');
             } catch (err) {
                 alert('Failed to stop account: ' + err.message);
             }
@@ -154,9 +132,9 @@ createApp({
 
         async handleStartAccount(id) {
             try {
-                await api.startTelegramAccount(id);
+                await accountService.startAccount(id);
                 await this.loadAccounts();
-                this.showSuccess('Account monitoring started!');
+                uiHelpers.showToast('Account monitoring started!');
             } catch (err) {
                 alert('Failed to start account: ' + err.message);
             }
@@ -172,23 +150,6 @@ createApp({
 
         async handleReloadAccounts() {
             await this.loadAccounts();
-        },
-
-        showSuccess(message) {
-            const toast = document.createElement('div');
-            toast.className = 'alert alert-success';
-            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; animation: slideDown 0.3s ease; min-width: 300px;';
-            toast.innerHTML = `
-                <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-                <span>${message}</span>
-            `;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
         }
     }
 }).mount('#app');
