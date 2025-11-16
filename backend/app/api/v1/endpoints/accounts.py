@@ -23,9 +23,9 @@ logger = get_logger("api.accounts")
 
 @router.post("/", response_model=TelegramAccountResponse, status_code=status.HTTP_201_CREATED)
 async def create_account(
-    account_data: TelegramAccountCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        account_data: TelegramAccountCreate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Create a new Telegram account"""
     try:
@@ -55,9 +55,9 @@ async def create_account(
 
 @router.post("/verify-code", response_model=TelegramAccountResponse)
 async def verify_code(
-    verify_data: VerifyCodeRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        verify_data: VerifyCodeRequest,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Verify authentication code and optional 2FA password"""
     try:
@@ -78,8 +78,8 @@ async def verify_code(
 
 @router.get("/", response_model=List[TelegramAccountResponse])
 async def get_accounts(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Get all Telegram accounts for the current user"""
     return await AccountService.get_accounts(current_user, db)
@@ -87,9 +87,9 @@ async def get_accounts(
 
 @router.get("/{account_id}", response_model=TelegramAccountResponse)
 async def get_account(
-    account_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        account_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Get a specific Telegram account"""
     try:
@@ -100,10 +100,10 @@ async def get_account(
 
 @router.patch("/{account_id}", response_model=TelegramAccountResponse)
 async def update_account(
-    account_id: int,
-    account_data: TelegramAccountUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        account_id: int,
+        account_data: TelegramAccountUpdate,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Update a Telegram account"""
     try:
@@ -117,9 +117,9 @@ async def update_account(
 
 @router.post("/{account_id}/start", response_model=TelegramAccountResponse)
 async def start_account(
-    account_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        account_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Start/resume monitoring for a Telegram account"""
     try:
@@ -133,9 +133,9 @@ async def start_account(
 
 @router.post("/{account_id}/stop", response_model=TelegramAccountResponse)
 async def stop_account(
-    account_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        account_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Stop monitoring for a Telegram account"""
     try:
@@ -146,9 +146,9 @@ async def stop_account(
 
 @router.delete("/{account_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_account(
-    account_id: int,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_async_session)
+        account_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_session)
 ):
     """Delete a Telegram account"""
     try:
