@@ -10,13 +10,11 @@
 </head>
 <body>
 <div id="app">
-    <!-- Loading State -->
     <div v-if="isLoading" class="loading">
         <div class="spinner"></div>
         <p>Loading...</p>
     </div>
 
-    <!-- Auth Components -->
     <login-component
             v-if="!isAuthenticated && !showRegister && !isLoading"
             @login="handleLogin"
@@ -33,14 +31,12 @@
             :loading="loading"
     ></register-component>
 
-    <!-- Dashboard -->
     <telegram-dashboard-component
             v-if="isAuthenticated && !isLoading"
             :user="user"
             :accounts="accounts"
             @logout="handleLogout"
             @add-account="handleAddAccount"
-            @edit-account="handleEditAccount"
             @delete-account="handleDeleteAccount"
             @stop-account="handleStopAccount"
             @start-account="handleStartAccount"
@@ -49,13 +45,13 @@
     ></telegram-dashboard-component>
 </div>
 
-<!-- Scripts - ORDER MATTERS -->
 <script src="js/api.js"></script>
 <script src="js/components/login.js"></script>
 <script src="js/components/register.js"></script>
 <script src="js/components/profile-modal.js"></script>
 <script src="js/components/verify-code-modal.js"></script>
 <script src="js/components/account-modal.js"></script>
+<script src="js/components/task-modal.js"></script>
 <script src="js/components/telegram-dashboard.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -1,8 +1,8 @@
-// frontend/js/components/telegram-dashboard.js
 const TelegramDashboardComponent = {
     name: 'TelegramDashboardComponent',
     components: {
         'account-modal-component': AccountModalComponent,
+        'task-modal-component': TaskModalComponent,
         'verify-code-modal-component': VerifyCodeModalComponent,
         'profile-modal-component': ProfileModalComponent
     },
@@ -43,7 +43,6 @@ const TelegramDashboardComponent = {
             </div>
 
             <div class="container">
-                <!-- Stats -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
@@ -62,12 +61,12 @@ const TelegramDashboardComponent = {
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-label">Active</div>
-                                <div class="stat-value">{{ activeCount }}</div>
+                                <div class="stat-label">Monitoring Tasks</div>
+                                <div class="stat-value">{{ totalTasks }}</div>
                             </div>
                             <div class="stat-icon" style="background: #c6f6d5;">
                                 <svg viewBox="0 0 24 24" fill="#2f855a">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                    <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
                                 </svg>
                             </div>
                         </div>
@@ -88,10 +87,9 @@ const TelegramDashboardComponent = {
                     </div>
                 </div>
 
-                <!-- Account List -->
                 <div class="website-header">
                     <h2 class="website-title">Telegram Accounts ({{ accounts.length }}/5)</h2>
-                    <button @click="handleAddClick" class="btn btn-primary btn-add-website">
+                    <button @click="handleAddAccountClick" class="btn btn-primary btn-add-website">
                         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor; margin-right: 8px;">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                         </svg>
@@ -107,7 +105,7 @@ const TelegramDashboardComponent = {
                     </div>
                     <h3>No accounts yet</h3>
                     <p>Add your first Telegram account to start monitoring channels</p>
-                    <button @click="handleAddClick" class="btn btn-primary" style="width: auto; padding: 12px 32px;">
+                    <button @click="handleAddAccountClick" class="btn btn-primary" style="width: auto; padding: 12px 32px;">
                         Add Your First Account
                     </button>
                 </div>
@@ -134,7 +132,6 @@ const TelegramDashboardComponent = {
                                     </span>
                                 </div>
                                 
-                                <!-- Compact info -->
                                 <div class="site-info-compact">
                                     <div class="site-info-label">Monitoring:</div>
                                     <div class="site-info-value">
@@ -144,183 +141,233 @@ const TelegramDashboardComponent = {
                                     </div>
                                 </div>
 
-                                <!-- Detailed info -->
-                                <div v-if="expandedItems[account.id]" class="site-info-grid">
-                                    <div class="site-info-label">Channels:</div>
-                                    <div class="site-info-value">
-                                        {{ account.monitored_channels.length }} ({{ account.monitored_channels.join(', ') }})
+                                <div v-if="account.monitoring_tasks.length > 0" style="margin-top: 15px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <strong style="color: #2d3748;">Monitoring Tasks ({{ account.monitoring_tasks.length }}/5):</strong>
+                                        <button v-if="account.monitoring_tasks.length < 5 && account.status === 'active'"
+                                                @click="handleAddTask(account)" 
+                                                class="btn btn-primary" 
+                                                style="padding: 6px 12px; font-size: 13px;">
+                                            + Add Task
+                                        </button>
                                     </div>
+                                    <div v-for="task in account.monitoring_tasks" :key="task.id" 
+                                         style="background: #f7fafc; padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #667eea;">
+                                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                                            <div style="flex: 1;">
+                                                <div style="font-weight: 600; color: #2d3748; margin-bottom: 5px;">
+                                                    {{ task.name }} [{{ account.phone_number }}]
+                                                    <span :class="task.is_active ? 'status-badge status-active' : 'status-badge status-stopped'" 
+                                                          style="margin-left: 8px; font-size: 11px;">
+                                                        {{ task.is_active ? 'Active' : 'Inactive' }}
+                                                    </span>
+                                                </div>
+                                                <div v-if="expandedTasks[task.id]" class="site-info-grid" style="margin-top: 8px;">
+                                                    <div class="site-info-label">Channels:</div>
+                                                    <div class="site-info-value">{{ task.monitored_channels.join(', ') }}</div>
+                                                    
+                                                    <div class="site-info-label">Forward to:</div>
+                                                    <div class="site-info-value">{{ task.forward_to_chat_id }}</div>
+                                                    
+                                                    <div class="site-info-label">Whitelist:</div>
+                                                    <div class="site-info-value">
+                                                        <template v-if="task.whitelist_keywords.length > 0">
+                                                            {{ task.whitelist_keywords.join(', ') }}
+                                                        </template>
+                                                        <template v-else>All messages</template>
+                                                    </div>
+                                                    
+                                                    <div class="site-info-label">Blacklist:</div>
+                                                    <div class="site-info-value">
+                                                        <template v-if="task.blacklist_keywords.length > 0">
+                                                            {{ task.blacklist_keywords.join(', ') }}
+                                                        </template>
+                                                        <template v-else>None</template>
+                                                    </div>
+                                                </div>
+                                                <button @click="toggleTaskExpand(task.id)" class="btn-toggle-details" style="margin-top: 8px;">
+<span>{{ expandedTasks[task.id] ? 'Hide details' : 'Show details' }}</span>
+<svg viewBox="0 0 24 24" :class="{ 'rotate-180': expandedTasks[task.id] }">
+<path d="M7 10l5 5 5-5z"/>
+</svg>
+</button>
+</div>
+<div style="display: flex; gap: 5px; margin-left: 10px;">
+<button @click="handleEditTask(account, task)" class="btn-icon" title="Edit Task">
+<svg viewBox="0 0 24 24">
+<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+</svg>
+</button>
+<button @click="handleDeleteTask(account.id, task.id)" class="btn-icon btn-icon-danger" title="Delete Task">
+<svg viewBox="0 0 24 24">
+<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+</svg>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div v-else style="margin-top: 15px;">
+<div style="color: #718096; font-size: 14px; margin-bottom: 10px;">No monitoring tasks configured</div>
+<button v-if="account.status === 'active'"
+@click="handleAddTask(account)"
+class="btn btn-primary"
+style="padding: 8px 16px; font-size: 14px;">
++ Add First Task
+</button>
+</div>
+        <div v-if="expandedItems[account.id]" class="site-info-grid" style="margin-top: 15px;">
+                                <template v-if="account.last_activity">
+                                    <div class="site-info-label">Last activity:</div>
+                                    <div class="site-info-value">{{ formatDate(account.last_activity) }}</div>
+                                </template>
 
-                                    <div class="site-info-label">Whitelist:</div>
-                                    <div class="site-info-value">
-                                        <template v-if="account.whitelist_keywords.length > 0">
-                                            {{ account.whitelist_keywords.length }} ({{ account.whitelist_keywords.join(', ') }})
-                                        </template>
-                                        <template v-else>All messages</template>
-                                    </div>
-
-                                    <div class="site-info-label">Blacklist:</div>
-                                    <div class="site-info-value">
-                                        <template v-if="account.blacklist_keywords.length > 0">
-                                            {{ account.blacklist_keywords.length }} ({{ account.blacklist_keywords.join(', ') }})
-                                        </template>
-                                        <template v-else>None</template>
-                                    </div>
-
-                                    <div class="site-info-label">Forward to:</div>
-                                    <div class="site-info-value">{{ account.forward_to_chat_id || 'Not set' }}</div>
-
-                                    <div class="site-info-label">Replacements:</div>
-                                    <div class="site-info-value">
-                                        {{ Object.keys(account.replacements).length }} rules
-                                    </div>
-
-                                    <template v-if="account.last_activity">
-                                        <div class="site-info-label">Last activity:</div>
-                                        <div class="site-info-value">{{ formatDate(account.last_activity) }}</div>
-                                    </template>
-
-                                    <template v-if="account.error_message">
-                                        <div class="site-info-label">Error:</div>
-                                        <div class="site-info-value" style="color: #e53e3e;">{{ account.error_message }}</div>
-                                    </template>
-                                </div>
-
-                                <button @click="toggleExpand(account.id)" class="btn-toggle-details">
-                                    <span>{{ expandedItems[account.id] ? 'Hide details' : 'Show details' }}</span>
-                                    <svg viewBox="0 0 24 24" :class="{ 'rotate-180': expandedItems[account.id] }">
-                                        <path d="M7 10l5 5 5-5z"/>
-                                    </svg>
-                                </button>
+                                <template v-if="account.error_message">
+                                    <div class="site-info-label">Error:</div>
+                                    <div class="site-info-value" style="color: #e53e3e;">{{ account.error_message }}</div>
+                                </template>
                             </div>
-                        </div>
-                        
-                        <div class="website-actions">
-                            <!-- Show Verify button if waiting for code -->
-                            <button v-if="account.status === 'awaiting_code' || account.status === 'awaiting_2fa'"
-                                    @click="showVerifyModal(account)" 
-                                    class="btn-icon btn-icon-primary" 
-                                    title="Verify Code">
-                                <svg viewBox="0 0 24 24" style="fill: #667eea;">
-                                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-                                </svg>
-                            </button>
-                            
-                            <!-- Start/Stop -->
-                            <button v-if="account.status === 'active' && account.is_active"
-                                    @click="handleStop(account.id)" 
-                                    class="btn-icon" 
-                                    title="Stop">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M6 6h12v12H6z"/>
-                                </svg>
-                            </button>
-                            
-                            <button v-else-if="(account.status === 'active' || account.status === 'stopped') && !account.is_active"
-                                    @click="handleStart(account.id)" 
-                                    class="btn-icon" 
-                                    title="Start">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"/>
-                                </svg>
-                            </button>
-                            
-                            <button @click="handleEdit(account)" class="btn-icon" title="Edit">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                                </svg>
-                            </button>
-                            
-                            <button @click="handleDelete(account.id)" class="btn-icon btn-icon-danger" title="Delete">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+
+                            <button @click="toggleExpand(account.id)" class="btn-toggle-details">
+                                <span>{{ expandedItems[account.id] ? 'Hide details' : 'Show details' }}</span>
+                                <svg viewBox="0 0 24 24" :class="{ 'rotate-180': expandedItems[account.id] }">
+                                    <path d="M7 10l5 5 5-5z"/>
                                 </svg>
                             </button>
                         </div>
                     </div>
+                    
+                    <div class="website-actions">
+                        <button v-if="account.status === 'awaiting_code' || account.status === 'awaiting_2fa'"
+                                @click="showVerifyModal(account)" 
+                                class="btn-icon btn-icon-primary" 
+                                title="Verify Code">
+                            <svg viewBox="0 0 24 24" style="fill: #667eea;">
+                                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                            </svg>
+                        </button>
+                        
+                        <button v-if="account.status === 'active' && account.is_active"
+                                @click="handleStop(account.id)" 
+                                class="btn-icon" 
+                                title="Stop">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 6h12v12H6z"/>
+                            </svg>
+                        </button>
+                        
+                        <button v-else-if="(account.status === 'active' || account.status === 'stopped') && !account.is_active"
+                                @click="handleStart(account.id)" 
+                                class="btn-icon" 
+                                title="Start">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                        
+                        <button @click="handleDelete(account.id)" class="btn-icon btn-icon-danger" title="Delete">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Modals -->
-                <account-modal-component
-                    v-if="showAddModal || showEditModal"
-                    :account="editingAccount"
-                    :is-edit="showEditModal"
-                    :user="user"
-                    @close="closeModals"
-                    @save="handleSave"
-                ></account-modal-component>
+            <account-modal-component
+                v-if="showAddAccountModal"
+                :user="user"
+                @close="showAddAccountModal = false"
+                @save="handleSaveAccount"
+            ></account-modal-component>
 
-                <verify-code-modal-component
-                    v-if="showVerifyCodeModal"
-                    :account="verifyingAccount"
-                    @close="showVerifyCodeModal = false"
-                    @verified="handleVerified"
-                ></verify-code-modal-component>
+            <task-modal-component
+                v-if="showTaskModal"
+                :task="editingTask"
+                :is-edit="isEditingTask"
+                :account-id="currentAccountId"
+                :user="user"
+                @close="closeTaskModal"
+                @save="handleSaveTask"
+            ></task-modal-component>
 
-                <profile-modal-component
-                    v-if="showProfileModal"
-                    :user="user"
-                    @close="showProfileModal = false"
-                    @updated="handleProfileUpdated"
-                ></profile-modal-component>
+            <verify-code-modal-component
+                v-if="showVerifyCodeModal"
+                :account="verifyingAccount"
+                @close="showVerifyCodeModal = false"
+                @verified="handleVerified"
+            ></verify-code-modal-component>
 
-                <!-- Topup Modal -->
-                <div v-if="showTopupModal" class="modal-overlay" @click.self="showTopupModal = false">
-                    <div class="modal-content" style="max-width: 400px;">
-                        <div class="modal-header">
-                            <h2 class="modal-title">Top Up Balance</h2>
-                            <button @click="showTopupModal = false" class="btn-close">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Amount ($)</label>
-                            <input v-model.number="topupAmount" type="number" class="form-input" placeholder="10.00" min="1" step="0.01">
-                        </div>
-                        <div class="modal-footer">
-                            <button @click="showTopupModal = false" class="btn btn-secondary">Cancel</button>
-                            <button @click="handleTopup" class="btn btn-primary">Add Funds (Stub)</button>
-                        </div>
+            <profile-modal-component
+                v-if="showProfileModal"
+                :user="user"
+                @close="showProfileModal = false"
+                @updated="handleProfileUpdated"
+            ></profile-modal-component>
+
+            <div v-if="showTopupModal" class="modal-overlay" @click.self="showTopupModal = false">
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Top Up Balance</h2>
+                        <button @click="showTopupModal = false" class="btn-close">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount ($)</label>
+                        <input v-model.number="topupAmount" type="number" class="form-input" placeholder="10.00" min="1" step="0.01">
+                    </div>
+                    <div class="modal-footer">
+                        <button @click="showTopupModal = false" class="btn btn-secondary">Cancel</button>
+                        <button @click="handleTopup" class="btn btn-primary">Add Funds (Stub)</button>
                     </div>
                 </div>
             </div>
         </div>
-    `,
+    </div>
+`,
     props: ['user', 'accounts'],
     data() {
         return {
-            showAddModal: false,
-            showEditModal: false,
+            showAddAccountModal: false,
+            showTaskModal: false,
             showVerifyCodeModal: false,
             showTopupModal: false,
             showProfileModal: false,
-            editingAccount: null,
             verifyingAccount: null,
             expandedItems: {},
-            topupAmount: 10
+            expandedTasks: {},
+            topupAmount: 10,
+            editingTask: null,
+            isEditingTask: false,
+            currentAccountId: null
         };
     },
     computed: {
-        activeCount() {
-            return this.accounts.filter(a => a.is_active && a.status === 'active').length;
+        totalTasks() {
+            return this.accounts.reduce((sum, acc) => sum + acc.monitoring_tasks.length, 0);
         },
         errorCount() {
             return this.accounts.filter(a => a.status === 'error' || a.unread_notifications_count > 0).length;
         }
     },
     methods: {
-        handleAddClick() {
+        handleAddAccountClick() {
             if (this.accounts.length >= 5) {
                 alert('Maximum number of accounts (5) reached. Please delete an existing account to add a new one.');
                 return;
             }
-            this.showAddModal = true;
+            this.showAddAccountModal = true;
         },
 
         toggleExpand(accountId) {
             this.expandedItems[accountId] = !this.expandedItems[accountId];
+        },
+
+        toggleTaskExpand(taskId) {
+            this.expandedTasks[taskId] = !this.expandedTasks[taskId];
         },
 
         formatDate(dateString) {
@@ -340,18 +387,13 @@ const TelegramDashboardComponent = {
             return date.toLocaleString();
         },
 
-        handleEdit(account) {
-            this.editingAccount = {...account};
-            this.showEditModal = true;
-        },
-
         showVerifyModal(account) {
             this.verifyingAccount = account;
             this.showVerifyCodeModal = true;
         },
 
         async handleDelete(accountId) {
-            if (confirm('Are you sure you want to delete this account? This will stop monitoring and delete the session.')) {
+            if (confirm('Are you sure you want to delete this account? This will stop monitoring and delete all tasks.')) {
                 this.$emit('delete-account', accountId);
             }
         },
@@ -366,19 +408,9 @@ const TelegramDashboardComponent = {
             }
         },
 
-        closeModals() {
-            this.showAddModal = false;
-            this.showEditModal = false;
-            this.editingAccount = null;
-        },
-
-        handleSave(data) {
-            if (this.showEditModal) {
-                this.$emit('edit-account', this.editingAccount.id, data);
-            } else {
-                this.$emit('add-account', data);
-            }
-            this.closeModals();
+        handleSaveAccount(data) {
+            this.$emit('add-account', data);
+            this.showAddAccountModal = false;
         },
 
         handleVerified() {
@@ -420,6 +452,77 @@ const TelegramDashboardComponent = {
 
         handleProfileUpdated() {
             this.$emit('reload-user');
+        },
+
+        handleAddTask(account) {
+            const taskCount = account.monitoring_tasks.length;
+            if (taskCount >= 5) {
+                alert('Maximum number of monitoring tasks (5) reached for this account.');
+                return;
+            }
+            this.currentAccountId = account.id;
+            this.editingTask = null;
+            this.isEditingTask = false;
+            this.showTaskModal = true;
+        },
+
+        handleEditTask(account, task) {
+            this.currentAccountId = account.id;
+            this.editingTask = {...task};
+            this.isEditingTask = true;
+            this.showTaskModal = true;
+        },
+
+        async handleSaveTask(data) {
+            try {
+                if (this.isEditingTask) {
+                    await api.updateMonitoringTask(this.currentAccountId, this.editingTask.id, data);
+                    this.showSuccess('Task updated successfully!');
+                } else {
+                    await api.createMonitoringTask(this.currentAccountId, data);
+                    this.showSuccess('Task created successfully!');
+                }
+                this.closeTaskModal();
+                this.$emit('reload-accounts');
+            } catch (err) {
+                alert('Failed to save task: ' + err.message);
+            }
+        },
+
+        async handleDeleteTask(accountId, taskId) {
+            if (confirm('Are you sure you want to delete this monitoring task?')) {
+                try {
+                    await api.deleteMonitoringTask(accountId, taskId);
+                    this.showSuccess('Task deleted successfully!');
+                    this.$emit('reload-accounts');
+                } catch (err) {
+                    alert('Failed to delete task: ' + err.message);
+                }
+            }
+        },
+
+        closeTaskModal() {
+            this.showTaskModal = false;
+            this.editingTask = null;
+            this.isEditingTask = false;
+            this.currentAccountId = null;
+        },
+
+        showSuccess(message) {
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-success';
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; animation: slideDown 0.3s ease; min-width: 300px;';
+            toast.innerHTML = `
+            <svg style="width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <span>${message}</span>
+        `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
     }
 };

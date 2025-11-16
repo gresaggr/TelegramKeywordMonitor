@@ -89,13 +89,6 @@ const api = {
         });
     },
 
-    async updateTelegramAccount(id, data) {
-        return this.call(`/accounts/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(data)
-        });
-    },
-
     async deleteTelegramAccount(id) {
         return this.call(`/accounts/${id}`, {
             method: 'DELETE'
@@ -121,6 +114,27 @@ const api = {
     async markNotificationRead(accountId, notificationId) {
         return this.call(`/accounts/${accountId}/notifications/${notificationId}/read`, {
             method: 'POST'
+        });
+    },
+
+    // Monitoring Tasks
+    async createMonitoringTask(accountId, data) {
+        return this.call(`/accounts/${accountId}/tasks`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateMonitoringTask(accountId, taskId, data) {
+        return this.call(`/accounts/${accountId}/tasks/${taskId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async deleteMonitoringTask(accountId, taskId) {
+        return this.call(`/accounts/${accountId}/tasks/${taskId}`, {
+            method: 'DELETE'
         });
     }
 };

@@ -1219,3 +1219,12 @@ button:disabled {
 .password-toggle svg {
     fill: currentColor;
 }
+
+.rotate-180 {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
+}
+
+.btn-toggle-details svg {
+    transition: transform 0.3s ease;
+}
