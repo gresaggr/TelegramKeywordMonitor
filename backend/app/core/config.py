@@ -58,6 +58,10 @@ class Settings(BaseSettings):
 
     USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
+    # Billing settings
+    MONTHLY_COST_MAX: float = 1000.0  # Cost for 5 accounts + 25 tasks (5*5)
+    BALANCE_CHECK_INTERVAL: int = 600  # 10 minutes in seconds
+
     env_path: ClassVar[str] = str(Path(__file__).parent.parent.parent.parent / ".env")
     model_config = SettingsConfigDict(
         env_file=env_path,

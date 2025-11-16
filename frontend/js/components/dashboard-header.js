@@ -10,15 +10,15 @@ const DashboardHeaderComponent = {
                         </svg>
                     </div>
                     <div class="header-text">
-                        <h1>{{ t('app.title') }}</h1>
-                        <p>{{ t('header.dashboard') }}</p>
+                        <h1>{{ t("app.title") }}</h1>
+                        <p>{{ t("header.dashboard") }}</p>
                     </div>
                 </div>
                 <div class="header-user">
                     <div class="user-info">
                         <div class="user-name">{{ user.username }}</div>
                         <div class="user-email">{{ user.email }}</div>
-                        <div class="user-balance">{{ t('modal.profile.balance') }}: {{ user.balance.toFixed(2) }}</div>
+                        <div class="user-balance" v-html="balanceDisplay"></div>
                     </div>
                     <button @click="$emit('open-profile')" class="btn-settings" :title="t('header.profile')">
                         <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor;">
@@ -30,12 +30,24 @@ const DashboardHeaderComponent = {
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
                         </svg>
                     </button>
-                    <button @click="$emit('logout')" class="btn-logout">{{ t('header.logout') }}</button>
+                    <button @click="$emit('logout')" class="btn-logout">{{ t("header.logout") }}</button>
                 </div>
             </div>
         </div>
     `,
-    props: ['user'],
+    props: ['user', 'balanceInfo'],
+    computed: {
+        balanceDisplay() {
+            const balance = this.balanceInfo.balance.toFixed(2);
+            const label = this.t("modal.profile.balance");
+            const label_hour = this.t("modal.profile.balance.hour");
+            if (this.balanceInfo.hourly_cost > 0) {
+                const cost = this.balanceInfo.hourly_cost.toFixed(4);
+                return `${label}: ${balance} <span style="font-size: 11px; color: #718096; margin-left: 5px;">(-${cost}/${label_hour})</span>`;
+            }
+            return `${label}: ${balance}`;
+        }
+    },
     methods: {
         t(key) {
             return window.t ? window.t(key) : key;

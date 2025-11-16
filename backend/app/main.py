@@ -1,4 +1,5 @@
 import uvicorn
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -8,6 +9,19 @@ from app.core.logger import logger
 from app.api.v1 import auth, balance, accounts
 from app.telegram.client_manager import telegram_manager
 from app.db.session import async_session_maker
+from app.services.billing_service import billing_service
+
+
+async def billing_loop():
+    """Background task for processing billing"""
+    logger.info(f"Billing loop started (interval: {settings.BALANCE_CHECK_INTERVAL}s)")
+
+    while True:
+        try:
+            await asyncio.sleep(settings.BALANCE_CHECK_INTERVAL)
+            await billing_service.process_all_users()
+        except Exception as e:
+            logger.error(f"Error in billing loop: {e}")
 
 
 @asynccontextmanager
@@ -18,6 +32,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"📊 Database: {settings.DATABASE_URL.split('@')[1]}")
     logger.info(f"📮 Redis: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
     logger.info(f"📁 Sessions: {settings.SESSIONS_DIR}")
+    logger.info(f"💰 Billing: ${settings.MONTHLY_COST_MAX}/month, check every {settings.BALANCE_CHECK_INTERVAL}s")
     if settings.TELEGRAM_BOT_TOKEN:
         logger.info("🔔 Telegram Bot: ✓ Configured")
     else:
@@ -28,11 +43,23 @@ async def lifespan(app: FastAPI):
     async with async_session_maker() as db:
         await telegram_manager.startup_restore_accounts(db)
 
+    # Start billing background task
+    billing_task = asyncio.create_task(billing_loop())
+
     yield
 
-    # Shutdown all accounts
+    # Shutdown
     logger.info("=" * 60)
     logger.info("🛑 Application shutting down...")
+
+    # Cancel billing task
+    billing_task.cancel()
+    try:
+        await billing_task
+    except asyncio.CancelledError:
+        pass
+
+    # Shutdown all accounts
     await telegram_manager.shutdown_all_accounts()
     logger.info("=" * 60)
 
@@ -88,7 +115,8 @@ async def root():
             "Keyword filtering (whitelist/blacklist)",
             "Message forwarding with replacements",
             "Real-time notifications",
-            "User dashboard"
+            "User dashboard",
+            "Automated billing"
         ]
     }
 

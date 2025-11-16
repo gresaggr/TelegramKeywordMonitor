@@ -16,6 +16,7 @@ const TelegramDashboardComponent = {
         <div class="dashboard">
             <dashboard-header-component
                 :user="user"
+                :balance-info="balanceInfo"
                 @logout="$emit('logout')"
                 @open-profile="showProfileModal = true"
                 @open-topup="showTopupModal = true"
@@ -124,7 +125,14 @@ const TelegramDashboardComponent = {
             isEditingTask: false,
             currentAccountId: null,
             editingAccount: null,
-            isEditingAccount: false
+            isEditingAccount: false,
+            balanceInfo: {
+                balance: 0,
+                active_accounts: 0,
+                active_tasks: 0,
+                hourly_cost: 0
+            },
+            balanceUpdateInterval: null
         };
     },
     computed: {
@@ -135,9 +143,27 @@ const TelegramDashboardComponent = {
             return this.accounts.filter(a => a.status === 'error' || a.unread_notifications_count > 0).length;
         }
     },
+    mounted() {
+        this.loadBalance();
+        this.balanceUpdateInterval = setInterval(() => {
+            this.loadBalance();
+        }, 30000); // Update every 30 seconds
+    },
+    beforeUnmount() {
+        if (this.balanceUpdateInterval) {
+            clearInterval(this.balanceUpdateInterval);
+        }
+    },
     methods: {
         t(key) {
             return window.t ? window.t(key) : key;
+        },
+        async loadBalance() {
+            try {
+                this.balanceInfo = await balanceService.getBalance();
+            } catch (err) {
+                console.error('Failed to load balance:', err);
+            }
         },
         handleAddAccountClick() {
             if (this.accounts.length >= 5) {
@@ -169,16 +195,19 @@ const TelegramDashboardComponent = {
         async handleDelete(accountId) {
             if (confirm(this.t('confirm.delete.account'))) {
                 this.$emit('delete-account', accountId);
+                setTimeout(() => this.loadBalance(), 1000);
             }
         },
 
         handleStart(accountId) {
             this.$emit('start-account', accountId);
+            setTimeout(() => this.loadBalance(), 1000);
         },
 
         async handleStop(accountId) {
             if (confirm(this.t('confirm.stop.account'))) {
                 this.$emit('stop-account', accountId);
+                setTimeout(() => this.loadBalance(), 1000);
             }
         },
 
@@ -201,6 +230,7 @@ const TelegramDashboardComponent = {
         handleVerified() {
             this.showVerifyCodeModal = false;
             this.$emit('reload-accounts');
+            setTimeout(() => this.loadBalance(), 1000);
         },
 
         async showNotifications(account) {
@@ -226,6 +256,7 @@ const TelegramDashboardComponent = {
 
         handleTopupSuccess() {
             this.$emit('reload-user');
+            this.loadBalance();
             uiHelpers.showToast(this.t('toast.balanceTopup'));
         },
 
@@ -258,6 +289,7 @@ const TelegramDashboardComponent = {
                 }
                 this.closeTaskModal();
                 this.$emit('reload-accounts');
+                setTimeout(() => this.loadBalance(), 1000);
             } catch (err) {
                 alert(this.t('alert.taskSaveFailed') + ': ' + err.message);
             }
@@ -268,6 +300,7 @@ const TelegramDashboardComponent = {
                 await taskService.startTask(accountId, taskId);
                 uiHelpers.showToast(this.t('toast.taskStarted'));
                 this.$emit('reload-accounts');
+                setTimeout(() => this.loadBalance(), 1000);
             } catch (err) {
                 alert(this.t('alert.taskStartFailed') + ': ' + err.message);
             }
@@ -279,6 +312,7 @@ const TelegramDashboardComponent = {
                     await taskService.stopTask(accountId, taskId);
                     uiHelpers.showToast(this.t('toast.taskStopped'));
                     this.$emit('reload-accounts');
+                    setTimeout(() => this.loadBalance(), 1000);
                 } catch (err) {
                     alert(this.t('alert.taskStopFailed') + ': ' + err.message);
                 }
@@ -291,6 +325,7 @@ const TelegramDashboardComponent = {
                     await taskService.deleteTask(accountId, taskId);
                     uiHelpers.showToast(this.t('toast.taskDeleted'));
                     this.$emit('reload-accounts');
+                    setTimeout(() => this.loadBalance(), 1000);
                 } catch (err) {
                     alert(this.t('alert.taskDeleteFailed') + ': ' + err.message);
                 }
