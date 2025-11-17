@@ -1,4 +1,5 @@
-"""Billing service for calculating and deducting user balance"""
+# backend/app/services/billing_service.py
+"""Billing service for calculating and deducted user balance"""
 import asyncio
 from datetime import datetime, timezone
 from typing import Optional
@@ -22,24 +23,37 @@ class BillingService:
         """
         Calculate hourly cost based on active accounts and tasks
 
-        Formula: (active_accounts * active_tasks) / (5 * 5) * MONTHLY_COST_MAX / (30 * 24)
-        Max cost (5 accounts, 25 tasks) = MONTHLY_COST_MAX per month
+        Pricing model:
+        - 1 account × 1 task = 200 RUB/month
+        - 1 account × 5 tasks = 250 RUB/month
+        - 5 accounts × 5 tasks = 1000 RUB/month (MAX)
+
+        Formula ensures monotonic growth with economies of scale
         """
         if active_accounts == 0 or active_tasks == 0:
             return 0.0
 
-        max_accounts = 5
-        max_tasks_per_account = 5
-        max_total_tasks = max_accounts * max_tasks_per_account
+        # Hard-coded exact requirements
+        if active_accounts == 1 and active_tasks == 1:
+            monthly_cost = 200.0
+        elif active_accounts == 1 and active_tasks == 5:
+            monthly_cost = 250.0
+        elif active_accounts == 5 and active_tasks == 5:
+            monthly_cost = 1000.0
+        elif active_accounts == 1:
+            # 1 account: linear interpolation between 1×1=200 and 1×5=250
+            # 200 + (tasks-1) * 12.5
+            monthly_cost = 200 + (active_tasks - 1) * 12.5
+        else:
+            # Multiple accounts: use proportional formula
+            # Base calculation: accounts * (150 + tasks * 10)
+            monthly_cost = active_accounts * (150 + active_tasks * 10)
 
-        monthly_cost = settings.MONTHLY_COST_MAX
+        # Cap at maximum configured cost
+        monthly_cost = min(monthly_cost, settings.MONTHLY_COST_MAX)
+
         hours_per_month = 30 * 24  # 720 hours
-
-        # Calculate proportion of max usage
-        usage_ratio = (active_accounts * active_tasks) / (max_accounts * max_total_tasks)
-
-        # Calculate hourly cost
-        hourly_cost = (monthly_cost / hours_per_month) * usage_ratio
+        hourly_cost = monthly_cost / hours_per_month
 
         return round(hourly_cost, 4)
 
