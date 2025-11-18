@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.session import get_async_session
 from app.models.user import User
 from app.schemas.account import (
@@ -26,10 +27,10 @@ async def create_monitoring_task(
 ):
     """Create a new monitoring task for an account"""
     try:
-        if len(task_data.monitored_channels) > 5:
+        if len(task_data.monitored_channels) > settings.MAXIMUM_NUMBER_OF_CHANNELS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum number of monitored channels is 5"
+                detail=f"Maximum number of monitored channels is {settings.MAXIMUM_NUMBER_OF_CHANNELS}"
             )
 
         return await AccountService.create_monitoring_task(account_id, task_data, current_user, db)

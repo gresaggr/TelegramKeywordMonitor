@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
+from app.core.config import settings
 from app.db.session import get_async_session
 from app.models.user import User
 from app.schemas.account import (
@@ -36,10 +37,10 @@ async def create_account(
         )
         account_count = result.scalar()
 
-        if account_count >= 5:
+        if account_count >= settings.MAXIMUM_NUMBER_OF_ACCOUNTS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Maximum number of accounts (5) reached."
+                detail=f"Maximum number of accounts ({settings.MAXIMUM_NUMBER_OF_ACCOUNTS}) reached."
             )
 
         account = await AccountService.create_account(account_data, current_user, db)

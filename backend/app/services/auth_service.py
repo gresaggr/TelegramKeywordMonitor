@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import create_access_token, verify_password, get_password_hash
@@ -26,7 +27,7 @@ class AuthService:
             email=user_data.email,
             username=user_data.username,
             hashed_password=get_password_hash(user_data.password),
-            balance=0.0,
+            balance=settings.START_BALANCE,
             language="en",
             default_api_id="2040",
             default_api_hash="b18441a1ff607e10a989891a5462e627",

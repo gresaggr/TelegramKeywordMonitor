@@ -256,7 +256,12 @@ var translations = {
         'notifications.empty': 'No notifications',
 
         // Loading
-        'loading.text': 'Loading...'
+        'loading.text': 'Loading...',
+
+        'error.balance.insufficient': 'Insufficient balance. Please top up your balance.',
+        'error.account.duplicate.active': 'This phone number is already active on another account.',
+
+
     },
     ru: {
         'app.title': 'Монитор Ключевых Слов Telegram',
@@ -513,6 +518,8 @@ var translations = {
         'notifications.empty': 'Нет уведомлений',
 
         // Loading
-        'loading.text': 'Загрузка...'
+        'loading.text': 'Загрузка...',
+        'error.balance.insufficient': 'Недостаточно средств. Пожалуйста, пополните баланс.',
+        'error.account.duplicate.active': 'Этот номер телефона уже активен на другом аккаунте.'
     }
 }

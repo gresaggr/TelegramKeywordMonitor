@@ -55,12 +55,18 @@ class Settings(BaseSettings):
     DEFAULT_CHECK_INTERVAL: int = 300
     DEFAULT_TIMEOUT: int = 30
     MAX_CONCURRENT_CHECKS: int = 100
+    ACCOUNT_HEALTH_CHECK_INTERVAL: int = 300  # 5 minutes проверять валидность аккаунтов
 
     USER_AGENT: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
     # Billing settings
     MONTHLY_COST_MAX: float = 1000.0
     BALANCE_CHECK_INTERVAL: int = 600  # 10 minutes in seconds
+    START_BALANCE: int = 10  # 10 руб стартового баланса при регистрации
+
+    MAXIMUM_NUMBER_OF_ACCOUNTS: int = 5  # сколько максимум ТГ аккаунтов на одном аккаунте
+    MAXIMUM_NUMBER_OF_TASKS: int = 5  # сколько максимум тасок на одном ТГ аккаунте
+    MAXIMUM_NUMBER_OF_CHANNELS: int = 5  # сколько максимум каналов в одной таске
 
     # YooKassa payment settings
     YOOKASSA_SHOP_ID: str = ""

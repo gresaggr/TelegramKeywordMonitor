@@ -71,7 +71,7 @@ class TelegramClientManager:
         """Periodically check account health"""
         while True:
             try:
-                await asyncio.sleep(10)
+                await asyncio.sleep(settings.ACCOUNT_HEALTH_CHECK_INTERVAL)
 
                 async with await self.db_ops._get_session() as db:
                     result = await db.execute(
@@ -81,10 +81,33 @@ class TelegramClientManager:
 
                     for account in active_accounts:
                         client = self.clients.get(account.id)
-                        if not client or not client.is_connected:
-                            logger.warning(f"Account {account.id} is not connected")
+                        if not client:
+                            logger.warning(f"Account {account.id} [{account.phone_number}] is missing client")
                             await self.db_ops.update_account_status(
                                 account.id, AccountStatus.STOPPED, is_active=False
+                            )
+                            continue
+
+                        if not client.is_connected:
+                            logger.warning(f"Account {account.id} [{account.phone_number}] is not connected")
+                            await self.db_ops.update_account_status(
+                                account.id, AccountStatus.STOPPED, is_active=False
+                            )
+                            continue
+
+                        # Check if account is still valid
+                        try:
+                            await client.get_me()
+                            logger.debug(f"Account {account.id} [{account.phone_number}] health check passed")
+                        except Exception as e:
+                            logger.error(f"Account {account.id} [{account.phone_number}] health check failed: {e}")
+                            await self.db_ops.handle_error(
+                                account.id,
+                                f"Account validation failed: {str(e)}",
+                                "validation_error"
+                            )
+                            await self.db_ops.update_account_status(
+                                account.id, AccountStatus.ERROR, is_active=False
                             )
 
             except Exception as e:

@@ -5,6 +5,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 
+from app.core.config import settings
 from app.models.account import TelegramAccount, MonitoringTask, AccountStatus
 from app.models.user import User
 from app.schemas.account import (
@@ -54,8 +55,8 @@ class TaskService:
             .where(MonitoringTask.account_id == account_id)
         )
         task_count = result.scalar()
-        if task_count >= 5:
-            raise ValueError("Maximum number of monitoring tasks (5) reached")
+        if task_count >= settings.MAXIMUM_NUMBER_OF_TASKS:
+            raise ValueError(f"Maximum number of monitoring tasks ({settings.MAXIMUM_NUMBER_OF_TASKS}) reached")
 
         # Create task
         new_task = MonitoringTask(

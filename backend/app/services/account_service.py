@@ -19,6 +19,7 @@ from app.telegram.client_manager import telegram_manager
 from app.core.logger import get_logger
 from .task_service import TaskService
 from .notification_service import NotificationService
+from ..core.config import settings
 
 logger = get_logger("services.account")
 
@@ -37,6 +38,10 @@ class AccountService:
             db: AsyncSession
     ) -> TelegramAccountResponse:
         """Create a new Telegram account"""
+        # Check balance
+        if user.balance <= 0:
+            raise ValueError("Insufficient balance. Please top up your balance to add accounts.")
+
         # Check for duplicate phone number
         result = await db.execute(
             select(TelegramAccount).where(
@@ -46,6 +51,28 @@ class AccountService:
         )
         if result.scalar_one_or_none():
             raise ValueError(f"Account with phone number {account_data.phone_number} already exists")
+
+        # Check if phone number is active on other users
+        result = await db.execute(
+            select(TelegramAccount).where(
+                TelegramAccount.phone_number == account_data.phone_number,
+                TelegramAccount.is_active == True,
+                TelegramAccount.user_id != user.id
+            )
+        )
+        active_on_other_user = result.scalar_one_or_none()
+        if active_on_other_user:
+            raise ValueError(f"Account with phone number {account_data.phone_number} is already active on another account")
+
+        # Check account limit
+        result = await db.execute(
+            select(func.count(TelegramAccount.id))
+            .where(TelegramAccount.user_id == user.id)
+        )
+        account_count = result.scalar()
+
+        if account_count >= settings.MAXIMUM_NUMBER_OF_ACCOUNTS:
+            raise ValueError(f"Maximum number of accounts ({settings.MAXIMUM_NUMBER_OF_ACCOUNTS}) reached.")
 
         # Create account
         new_account = TelegramAccount(
@@ -165,6 +192,10 @@ class AccountService:
     ) -> TelegramAccountResponse:
         """Start account monitoring"""
         account = await self._get_user_account(account_id, user, db)
+
+        # Check balance
+        if user.balance <= 0:
+            raise ValueError("Insufficient balance. Please top up your balance to start monitoring.")
 
         if account.status in [AccountStatus.AWAITING_CODE, AccountStatus.AWAITING_2FA]:
             raise ValueError("Please complete authorization first")
