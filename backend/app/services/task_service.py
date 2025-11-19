@@ -22,6 +22,31 @@ class TaskService:
     """Service for managing monitoring tasks"""
 
     @staticmethod
+    def _validate_keywords(keywords: List[str], field_name: str):
+        """Validate keyword list"""
+        if len(keywords) > settings.MAX_KEYWORD_LINES:
+            raise ValueError(f"{field_name} exceeds maximum of {settings.MAX_KEYWORD_LINES} lines")
+
+        for keyword in keywords:
+            if len(keyword) > settings.MAX_KEYWORD_LENGTH:
+                raise ValueError(
+                    f"{field_name} line exceeds maximum length of {settings.MAX_KEYWORD_LENGTH} characters")
+
+    @staticmethod
+    def _validate_replacements(replacements: dict):
+        """Validate replacements dict"""
+        if len(replacements) > settings.MAX_REPLACEMENT_LINES:
+            raise ValueError(f"Replacements exceed maximum of {settings.MAX_REPLACEMENT_LINES} lines")
+
+        for key, value in replacements.items():
+            if len(key) > settings.MAX_REPLACEMENT_LENGTH:
+                raise ValueError(
+                    f"Replacement key exceeds maximum length of {settings.MAX_REPLACEMENT_LENGTH} characters")
+            if len(value) > settings.MAX_REPLACEMENT_LENGTH:
+                raise ValueError(
+                    f"Replacement value exceeds maximum length of {settings.MAX_REPLACEMENT_LENGTH} characters")
+
+    @staticmethod
     def task_to_response(task: MonitoringTask) -> MonitoringTaskResponse:
         """Convert task model to response schema"""
         return MonitoringTaskResponse(
@@ -58,6 +83,11 @@ class TaskService:
         if task_count >= settings.MAXIMUM_NUMBER_OF_TASKS:
             raise ValueError(f"Maximum number of monitoring tasks ({settings.MAXIMUM_NUMBER_OF_TASKS}) reached")
 
+        # Validate limits
+        self._validate_keywords(task_data.whitelist_keywords, "Whitelist")
+        self._validate_keywords(task_data.blacklist_keywords, "Blacklist")
+        self._validate_replacements(task_data.replacements)
+
         # Create task
         new_task = MonitoringTask(
             account_id=account_id,
@@ -91,6 +121,14 @@ class TaskService:
 
         # Get task
         task = await self._get_task(account_id, task_id, db)
+
+        # Validate limits
+        if task_data.whitelist_keywords is not None:
+            self._validate_keywords(task_data.whitelist_keywords, "Whitelist")
+        if task_data.blacklist_keywords is not None:
+            self._validate_keywords(task_data.blacklist_keywords, "Blacklist")
+        if task_data.replacements is not None:
+            self._validate_replacements(task_data.replacements)
 
         # Update fields
         if task_data.name is not None:

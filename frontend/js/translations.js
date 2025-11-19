@@ -264,6 +264,13 @@ var translations = {
         'modal.topup.processing': 'Processing payment...',
         'modal.topup.error.minAmount': 'Minimum amount is 1 RUB',
 
+        'modal.task.error.whitelist.lines': 'Whitelist exceeds maximum of 10 lines',
+        'modal.task.error.whitelist.length': 'Whitelist line exceeds maximum length of 50 characters',
+        'modal.task.error.blacklist.lines': 'Blacklist exceeds maximum of 10 lines',
+        'modal.task.error.blacklist.length': 'Blacklist line exceeds maximum length of 50 characters',
+        'modal.task.error.replacements.lines': 'Replacements exceed maximum of 10 lines',
+        'modal.task.error.replacements.length': 'Replacement exceeds maximum length of 50 characters',
+
     },
     ru: {
         'app.title': 'Монитор Ключевых Слов Telegram',
@@ -526,5 +533,12 @@ var translations = {
 
         'modal.topup.processing': 'Обработка платежа...',
         'modal.topup.error.minAmount': 'Минимальная сумма 1 рубль',
+
+        'modal.task.error.whitelist.lines': 'Размер белого списка превышает максимум в 10 строк',
+        'modal.task.error.whitelist.length': 'Строка белого списка превышает максимум в 50 символов',
+        'modal.task.error.blacklist.lines': 'Размер черного списка превышает максимум в 10 строк',
+        'modal.task.error.blacklist.length': 'Строка черного списка превышает максимум в 50 символов',
+        'modal.task.error.replacements.lines': 'Замены превышают максимум в 10 строк',
+        'modal.task.error.replacements.length': 'Замена превышает максимум в 50 символов',
     }
 }

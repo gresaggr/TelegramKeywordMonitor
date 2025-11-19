@@ -27,14 +27,14 @@ const TaskModalComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">{{ t('modal.task.whitelist') }}</label>
+                    <label class="form-label">{{ t('modal.task.whitelist') }} (max 10 lines, 50 chars/line)</label>
                     <textarea v-model="whitelistInput" class="form-textarea" 
                               :placeholder="t('modal.task.placeholder.whitelist')" rows="3"></textarea>
                     <small style="color: #718096; font-size: 12px;">{{ t('modal.task.hint.whitelist') }}</small>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">{{ t('modal.task.blacklist') }}</label>
+                    <label class="form-label">{{ t('modal.task.blacklist') }} (max 10 lines, 50 chars/line)</label>
                     <textarea v-model="blacklistInput" class="form-textarea" 
                               :placeholder="t('modal.task.placeholder.blacklist')" rows="3"></textarea>
                     <small style="color: #718096; font-size: 12px;">{{ t('modal.task.hint.blacklist') }}</small>
@@ -54,7 +54,7 @@ const TaskModalComponent = {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">{{ t('modal.task.replacements') }}</label>
+                    <label class="form-label">{{ t('modal.task.replacements') }} (max 10 lines, 50 chars/line)</label>
                     <textarea v-model="replacementsInput" class="form-textarea" rows="4"
                               :placeholder="t('modal.task.placeholder.replacements')"></textarea>
                     <small style="color: #718096; font-size: 12px;">{{ t('modal.task.replacementsHint') }}</small>
@@ -116,6 +116,54 @@ const TaskModalComponent = {
             }
         },
 
+        validateInput() {
+            const parseLines = (text) => text.split('\n').map(s => s.trim()).filter(s => s);
+
+            // Validate whitelist
+            const whitelist = parseLines(this.whitelistInput);
+            if (whitelist.length > 10) {
+                this.error = this.t('modal.task.error.whitelist.lines');
+                return false;
+            }
+            for (const line of whitelist) {
+                if (line.length > 50) {
+                    this.error = this.t('modal.task.error.whitelist.length');
+                    return false;
+                }
+            }
+
+            // Validate blacklist
+            const blacklist = parseLines(this.blacklistInput);
+            if (blacklist.length > 10) {
+                this.error = this.t('modal.task.error.blacklist.lines');
+                return false;
+            }
+            for (const line of blacklist) {
+                if (line.length > 50) {
+                    this.error = this.t('modal.task.error.blacklist.length');
+                    return false;
+                }
+            }
+
+            // Validate replacements
+            const replacements = parseLines(this.replacementsInput);
+            if (replacements.length > 10) {
+                this.error = this.t('modal.task.error.replacements.lines');
+                return false;
+            }
+            for (const line of replacements) {
+                const parts = line.split('->').map(s => s.trim());
+                if (parts.length === 2) {
+                    if (parts[0].length > 50 || parts[1].length > 50) {
+                        this.error = this.t('modal.task.error.replacements.length');
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        },
+
         parseTextareas() {
             const parseLines = (text) => text.split('\n').map(s => s.trim()).filter(s => s);
 
@@ -134,6 +182,11 @@ const TaskModalComponent = {
 
         async handleSave() {
             this.error = '';
+
+            if (!this.validateInput()) {
+                return;
+            }
+
             this.parseTextareas();
 
             if (!this.form.name) {

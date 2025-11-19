@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     MAXIMUM_NUMBER_OF_TASKS: int = 5  # сколько максимум тасок на одном ТГ аккаунте
     MAXIMUM_NUMBER_OF_CHANNELS: int = 5  # сколько максимум каналов в одной таске
 
+    # Task limits
+    MAX_KEYWORD_LINES: int = 10  # максимум строк в белом/черном списке
+    MAX_KEYWORD_LENGTH: int = 50  # максимум символов в одной строке ключевого слова
+    MAX_REPLACEMENT_LINES: int = 10  # максимум строк замен
+    MAX_REPLACEMENT_LENGTH: int = 50  # максимум символов в одной строке замены
+
     # YooKassa payment settings
     YOOKASSA_SHOP_ID: str = ""
     YOOKASSA_SECRET_KEY: str = ""
