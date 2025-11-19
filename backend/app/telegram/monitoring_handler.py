@@ -1,3 +1,4 @@
+# backend/app/telegram/monitoring_handler.py
 """Handler for message monitoring and forwarding"""
 import json
 from datetime import datetime, timezone
@@ -6,6 +7,7 @@ from typing import Set, List
 from pyrogram import Client, filters
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
+from pyrogram.errors import FloodWait, AuthKeyDuplicated
 
 from app.core.logger import get_logger
 from app.models.account import TelegramAccount, MonitoringTask
@@ -162,6 +164,25 @@ class MonitoringHandler:
                             logger.info(f"Message sent from account {account_id} (task: {task.name})")
                             break
 
+            except FloodWait as e:
+                logger.error(f"FloodWait error for account {account_id}: wait {e.value} seconds")
+                # Create notification about flood wait
+                from app.telegram.db_operations import DatabaseOperations
+                db_ops = DatabaseOperations()
+                await db_ops.handle_error(
+                    account_id,
+                    f"FloodWait: Please wait {e.value} seconds before sending more messages",
+                    "flood_wait"
+                )
+            except AuthKeyDuplicated:
+                logger.error(f"AuthKeyDuplicated error for account {account_id}")
+                from app.telegram.db_operations import DatabaseOperations
+                db_ops = DatabaseOperations()
+                await db_ops.handle_error(
+                    account_id,
+                    "Authorization key duplicated. Please re-authorize the account.",
+                    "auth_key_duplicate"
+                )
             except Exception as e:
                 logger.error(f"Error handling message for account {account_id}: {e}")
 

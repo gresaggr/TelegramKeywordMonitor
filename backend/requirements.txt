@@ -39,3 +39,4 @@ yookassa==3.0.0
 # Optional: Flower for Celery monitoring
 # flower==2.0.1
 
+slowapi==0.1.9

@@ -1,3 +1,4 @@
+# backend/app/services/account_service.py
 """Service for Telegram account operations"""
 from typing import List, Optional
 
@@ -19,6 +20,7 @@ from app.telegram.client_manager import telegram_manager
 from app.core.logger import get_logger
 from .task_service import TaskService
 from .notification_service import NotificationService
+from .billing_service import billing_service
 from ..core.config import settings
 
 logger = get_logger("services.account")
@@ -39,7 +41,7 @@ class AccountService:
     ) -> TelegramAccountResponse:
         """Create a new Telegram account"""
         # Check balance
-        if user.balance <= 0:
+        if not await billing_service.check_balance_before_start(user.id, db):
             raise ValueError("Insufficient balance. Please top up your balance to add accounts.")
 
         # Check for duplicate phone number
@@ -62,7 +64,8 @@ class AccountService:
         )
         active_on_other_user = result.scalar_one_or_none()
         if active_on_other_user:
-            raise ValueError(f"Account with phone number {account_data.phone_number} is already active on another account")
+            raise ValueError(
+                f"Account with phone number {account_data.phone_number} is already active on another account")
 
         # Check account limit
         result = await db.execute(
@@ -193,8 +196,8 @@ class AccountService:
         """Start account monitoring"""
         account = await self._get_user_account(account_id, user, db)
 
-        # Check balance
-        if user.balance <= 0:
+        # Check balance before starting
+        if not await billing_service.check_balance_before_start(user.id, db):
             raise ValueError("Insufficient balance. Please top up your balance to start monitoring.")
 
         if account.status in [AccountStatus.AWAITING_CODE, AccountStatus.AWAITING_2FA]:
@@ -249,10 +252,22 @@ class AccountService:
             db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Create monitoring task"""
+        # Check if forward_to_chat_id is accessible
+        account = await self._get_user_account(account_id, user, db)
+
+        # Verify chat access
+        client = telegram_manager.clients.get(account_id)
+        if client:
+            try:
+                await client.get_chat(task_data.forward_to_chat_id)
+            except Exception as e:
+                logger.error(f"Cannot access chat {task_data.forward_to_chat_id}: {e}")
+                raise ValueError(
+                    f"Account doesn't have access to chat {task_data.forward_to_chat_id}. Please check the chat ID and ensure the account is a member.")
+
         result = await self.task_service.create_task(account_id, task_data, user, db)
 
         # Update monitoring if account is active
-        account = await self._get_user_account(account_id, user, db)
         if account.status == AccountStatus.ACTIVE and account.is_active:
             await telegram_manager.update_monitoring(account_id, db)
 
@@ -284,6 +299,10 @@ class AccountService:
             db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Start monitoring task"""
+        # Check balance before starting
+        if not await billing_service.check_balance_before_start(user.id, db):
+            raise ValueError("Insufficient balance. Please top up your balance to start task.")
+
         result = await self.task_service.toggle_task_status(account_id, task_id, True, user, db)
 
         account = await self._get_user_account(account_id, user, db)

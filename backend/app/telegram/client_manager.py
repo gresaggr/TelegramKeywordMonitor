@@ -1,9 +1,11 @@
+# backend/app/telegram/client_manager.py
 """Manages multiple Telegram client instances"""
 import asyncio
 from pathlib import Path
 from typing import Dict, Optional
 
 from pyrogram import Client
+from pyrogram.errors import FloodWait
 
 from app.core.config import settings
 from app.core.logger import get_logger
@@ -17,6 +19,9 @@ from .monitoring_handler import MonitoringHandler
 from .db_operations import DatabaseOperations
 
 logger = get_logger("telegram.manager")
+
+# Concurrency limit for account restoration
+MAX_CONCURRENT_RESTORES = 5
 
 
 class TelegramClientManager:
@@ -38,29 +43,44 @@ class TelegramClientManager:
         Path(settings.SESSIONS_DIR).mkdir(parents=True, exist_ok=True)
 
     async def startup_restore_accounts(self, db: AsyncSession):
-        """Restore active accounts on startup"""
+        """Restore active accounts on startup with concurrency control"""
         try:
             accounts = await self.db_ops.get_active_accounts()
             logger.info(f"Found {len(accounts)} active accounts to restore")
 
-            for account in accounts:
-                try:
-                    logger.info(f"Restoring account {account.id} [{account.phone_number}]")
-                    client, needs_auth = await self.create_client(account, db)
+            # Restore accounts with concurrency limit
+            semaphore = asyncio.Semaphore(MAX_CONCURRENT_RESTORES)
 
-                    if not needs_auth:
-                        await self.start_monitoring(account.id, db)
-                        logger.info(f"Account {account.id} restored successfully")
-                    else:
-                        logger.warning(f"Account {account.id} needs re-authentication")
-                        await self.db_ops.update_account_status(
-                            account.id, AccountStatus.AWAITING_CODE, is_active=False
+            async def restore_account(account):
+                async with semaphore:
+                    try:
+                        logger.info(f"Restoring account {account.id} [{account.phone_number}]")
+                        client, needs_auth = await self.create_client(account, db)
+
+                        if not needs_auth:
+                            await self.start_monitoring(account.id, db)
+                            logger.info(f"Account {account.id} restored successfully")
+                        else:
+                            logger.warning(f"Account {account.id} needs re-authentication")
+                            await self.db_ops.update_account_status(
+                                account.id, AccountStatus.AWAITING_CODE, is_active=False
+                            )
+                    except FloodWait as e:
+                        logger.error(f"FloodWait for account {account.id}: wait {e.value}s")
+                        await self.db_ops.handle_error(
+                            account.id,
+                            f"FloodWait on startup: please wait {e.value} seconds",
+                            "flood_wait"
                         )
-                except Exception as e:
-                    logger.error(f"Failed to restore account {account.id}: {e}")
-                    await self.db_ops.handle_error(
-                        account.id, f"Startup restore failed: {str(e)}", "startup_error"
-                    )
+                        await asyncio.sleep(e.value)
+                    except Exception as e:
+                        logger.error(f"Failed to restore account {account.id}: {e}")
+                        await self.db_ops.handle_error(
+                            account.id, f"Startup restore failed: {str(e)}", "startup_error"
+                        )
+
+            tasks = [restore_account(account) for account in accounts]
+            await asyncio.gather(*tasks, return_exceptions=True)
 
             self.health_check_task = asyncio.create_task(self._health_check_loop())
 

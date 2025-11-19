@@ -1,8 +1,12 @@
+# backend/app/main.py
 import uvicorn
 import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.logger import logger
@@ -10,6 +14,8 @@ from app.api.v1 import auth, balance, accounts, payments
 from app.telegram.client_manager import telegram_manager
 from app.db.session import async_session_maker
 from app.services.billing_service import billing_service
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 async def billing_loop():
@@ -43,7 +49,7 @@ async def lifespan(app: FastAPI):
         logger.info("💳 YooKassa: ✗ Not configured")
     logger.info("=" * 60)
 
-    # Restore active accounts
+    # Restore active accounts with concurrency limit
     async with async_session_maker() as db:
         await telegram_manager.startup_restore_accounts(db)
 
@@ -76,6 +82,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -126,7 +135,7 @@ async def root():
             "Message forwarding with replacements",
             "Real-time notifications",
             "User dashboard",
-            "Automated billing",
+            "Automated billing (channel-based pricing)",
             "YooKassa payment integration"
         ]
     }

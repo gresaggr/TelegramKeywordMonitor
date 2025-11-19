@@ -261,6 +261,8 @@ var translations = {
         'error.balance.insufficient': 'Insufficient balance. Please top up your balance.',
         'error.account.duplicate.active': 'This phone number is already active on another account.',
 
+        'modal.topup.processing': 'Processing payment...',
+        'modal.topup.error.minAmount': 'Minimum amount is 1 RUB',
 
     },
     ru: {
@@ -428,8 +430,8 @@ var translations = {
         'modal.profile.language.en': 'Английский',
         'modal.profile.language.ru': 'Русский',
         'modal.profile.telegramSettings': 'Настройки Telegram',
-        'modal.profile.chatId': 'ID Чата Telegram по Умолчанию (для уведомлений об ошибках)',
-        'modal.profile.forward': 'ID Чата для Пересылки по Умолчанию',
+        'modal.profile.chatId': 'ID Чата Telegram для уведомлений',
+        'modal.profile.forward': 'ID Чата для Пересылки',
         'modal.profile.defaultSettings': 'Настройки по умолчанию для Telegram Аккаунта',
         'modal.profile.apiId': 'API ID',
         'modal.profile.apiHash': 'API Hash',
@@ -520,6 +522,9 @@ var translations = {
         // Loading
         'loading.text': 'Загрузка...',
         'error.balance.insufficient': 'Недостаточно средств. Пожалуйста, пополните баланс.',
-        'error.account.duplicate.active': 'Этот номер телефона уже активен на другом аккаунте.'
+        'error.account.duplicate.active': 'Этот номер телефона уже активен на другом аккаунте.',
+
+        'modal.topup.processing': 'Обработка платежа...',
+        'modal.topup.error.minAmount': 'Минимальная сумма 1 рубль',
     }
 }

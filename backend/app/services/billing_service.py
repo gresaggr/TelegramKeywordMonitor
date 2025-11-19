@@ -1,5 +1,5 @@
 # backend/app/services/billing_service.py
-"""Billing service for calculating and deducted user balance"""
+"""Billing service for calculating and deducting user balance"""
 import asyncio
 from datetime import datetime, timezone
 from typing import Optional
@@ -28,7 +28,7 @@ class BillingService:
         - 1 account × 5 tasks = 250 RUB/month
         - 5 accounts × 5 tasks = 1000 RUB/month (MAX)
 
-        Formula ensures monotonic growth with economies of scale
+        Formula: accounts * (150 + tasks * 10) with manual corrections
         """
         if active_accounts == 0 or active_tasks == 0:
             return 0.0
@@ -40,13 +40,8 @@ class BillingService:
             monthly_cost = 250.0
         elif active_accounts == 5 and active_tasks == 5:
             monthly_cost = 1000.0
-        elif active_accounts == 1:
-            # 1 account: linear interpolation between 1×1=200 and 1×5=250
-            # 200 + (tasks-1) * 12.5
-            monthly_cost = 200 + (active_tasks - 1) * 12.5
         else:
-            # Multiple accounts: use proportional formula
-            # Base calculation: accounts * (150 + tasks * 10)
+            # General formula
             monthly_cost = active_accounts * (150 + active_tasks * 10)
 
         # Cap at maximum configured cost
@@ -85,16 +80,32 @@ class BillingService:
         return active_accounts, active_tasks
 
     @staticmethod
+    async def check_balance_before_start(user_id: int, db: AsyncSession) -> bool:
+        """Check if user has sufficient balance before starting monitoring"""
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            return False
+
+        if user.balance <= 0:
+            logger.warning(f"User {user_id}: Insufficient balance to start monitoring")
+            return False
+
+        return True
+
+    @staticmethod
     async def deduct_balance(user_id: int, db: AsyncSession) -> Optional[float]:
         """
         Deduct balance for one billing period
         Returns new balance or None if user not found
         """
-        # Get user
         result = await db.execute(
             select(User).where(User.id == user_id)
         )
         user = result.scalar_one_or_none()
+
         if not user:
             return None
 
@@ -102,7 +113,7 @@ class BillingService:
         active_accounts, active_tasks = await BillingService.get_user_active_stats(user_id, db)
 
         # Calculate cost for billing period (in hours)
-        billing_hours = settings.BALANCE_CHECK_INTERVAL / 3600  # Convert seconds to hours
+        billing_hours = settings.BALANCE_CHECK_INTERVAL / 3600
         hourly_cost = BillingService.calculate_hourly_cost(active_accounts, active_tasks)
         period_cost = hourly_cost * billing_hours
 
@@ -177,6 +188,14 @@ class BillingService:
                 "All monitoring services have been stopped.\n\n"
                 "Please top up your balance to resume monitoring."
             )
+            if user.language == "ru":
+                message = (
+                    "⚠️ *Уведомление о низком балансе*\n\n"
+                    "Ваш баланс достиг 0.\n"
+                    "Все задачи по отслеживанию остановлены.\n\n"
+                    "Пополните баланс для возобновления работы."
+                )
+
             try:
                 await send_telegram_notification(user.default_telegram_chat_id, message)
             except Exception as e:
@@ -190,7 +209,6 @@ class BillingService:
         logger.info("Starting billing cycle for all users")
 
         async with async_session_maker() as db:
-            # Get all users
             result = await db.execute(select(User))
             users = result.scalars().all()
 
@@ -203,5 +221,4 @@ class BillingService:
         logger.info("Billing cycle completed")
 
 
-# Singleton instance
 billing_service = BillingService()
