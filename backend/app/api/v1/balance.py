@@ -46,8 +46,7 @@ async def topup_balance(
         db: AsyncSession = Depends(get_async_session)
 ):
     """Top up balance (stub - payment integration needed)"""
-    # TODO: Implement payment gateway integration
-    # For now, just add the amount directly
+    # TODO: сделать оплату через ЮКассу
 
     current_user.balance += topup_data.amount
     await db.commit()

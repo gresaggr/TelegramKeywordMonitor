@@ -34,7 +34,6 @@ class TelegramClientManager:
         self.handlers: Dict[int, list] = {}
         self.health_check_task: Optional[asyncio.Task] = None
 
-        # Initialize components
         self.factory = ClientFactory()
         self.auth_handler = AuthHandler()
         self.monitoring_handler = MonitoringHandler()
@@ -48,7 +47,6 @@ class TelegramClientManager:
             accounts = await self.db_ops.get_active_accounts()
             logger.info(f"Found {len(accounts)} active accounts to restore")
 
-            # Restore accounts with concurrency limit
             semaphore = asyncio.Semaphore(MAX_CONCURRENT_RESTORES)
 
             async def restore_account(account):
@@ -115,7 +113,6 @@ class TelegramClientManager:
                             )
                             continue
 
-                        # Check if account is still valid
                         try:
                             await client.get_me()
                             logger.debug(f"Account {account.id} [{account.phone_number}] health check passed")
@@ -225,7 +222,6 @@ class TelegramClientManager:
             logger.error(f"Account {account_id} not found")
             return
 
-        # Get active monitoring tasks
         async with await self.db_ops._get_session() as session:
             result = await session.execute(
                 select(MonitoringTask).where(
@@ -235,7 +231,6 @@ class TelegramClientManager:
             )
             tasks = result.scalars().all()
 
-        # Remove old handlers
         if account_id in self.handlers:
             for handler_tuple in self.handlers[account_id]:
                 try:
@@ -244,7 +239,6 @@ class TelegramClientManager:
                     logger.warning(f"Could not remove handler: {e}")
             self.handlers[account_id] = []
 
-        # Setup new monitoring
         try:
             handler = await self.monitoring_handler.setup_monitoring(client, account_id, tasks)
 

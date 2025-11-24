@@ -49,27 +49,22 @@ async def lifespan(app: FastAPI):
         logger.info("💳 YooKassa: ✗ Not configured")
     logger.info("=" * 60)
 
-    # Restore active accounts with concurrency limit
     async with async_session_maker() as db:
         await telegram_manager.startup_restore_accounts(db)
 
-    # Start billing background task
     billing_task = asyncio.create_task(billing_loop())
 
     yield
 
-    # Shutdown
     logger.info("=" * 60)
     logger.info("🛑 Application shutting down...")
 
-    # Cancel billing task
     billing_task.cancel()
     try:
         await billing_task
     except asyncio.CancelledError:
         pass
 
-    # Shutdown all accounts
     await telegram_manager.shutdown_all_accounts()
     logger.info("=" * 60)
 
@@ -77,7 +72,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
-    description="Асинхронный сервис мониторинга ключевых слов в Telegram чатах",
+    description="Сервис мониторинга ключевых слов в Telegram чатах",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"

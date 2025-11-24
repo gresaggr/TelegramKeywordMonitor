@@ -22,7 +22,6 @@ class NotificationService:
         db: AsyncSession
     ) -> List[AccountNotificationResponse]:
         """Get all notifications for an account"""
-        # Verify account ownership
         result = await db.execute(
             select(TelegramAccount).where(
                 TelegramAccount.id == account_id,
@@ -32,7 +31,6 @@ class NotificationService:
         if not result.scalar_one_or_none():
             raise ValueError("Account not found")
 
-        # Get notifications
         result = await db.execute(
             select(AccountNotification)
             .where(AccountNotification.account_id == account_id)
@@ -48,7 +46,6 @@ class NotificationService:
         db: AsyncSession
     ):
         """Mark a notification as read"""
-        # Verify account ownership
         result = await db.execute(
             select(TelegramAccount).where(
                 TelegramAccount.id == account_id,
@@ -58,7 +55,6 @@ class NotificationService:
         if not result.scalar_one_or_none():
             raise ValueError("Account not found")
 
-        # Get and update notification
         result = await db.execute(
             select(AccountNotification).where(
                 AccountNotification.id == notification_id,

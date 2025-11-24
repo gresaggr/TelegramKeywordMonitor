@@ -28,7 +28,6 @@ class AuthHandler:
         Returns: Authenticated client
         """
         try:
-            # Get account and phone_code_hash
             from sqlalchemy.ext.asyncio import async_sessionmaker
             from app.db.session import engine
             async_session = async_sessionmaker(engine, expire_on_commit=False)
@@ -46,14 +45,12 @@ class AuthHandler:
 
                 phone_code_hash = account.phone_code_hash
 
-            # Try to sign in with code
             await pending_client.sign_in(
                 phone_number=account.phone_number,
                 phone_code_hash=phone_code_hash,
                 phone_code=code
             )
 
-            # Clear phone_code_hash on success
             await self._clear_phone_code_hash(account_id)
 
             logger.info(f"Account {account_id} [{account.phone_number}] successfully authorized")

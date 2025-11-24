@@ -30,7 +30,6 @@ async def create_account(
 ):
     """Create a new Telegram account"""
     try:
-        # Check account limit
         result = await db.execute(
             select(func.count(TelegramAccount.id))
             .where(TelegramAccount.user_id == current_user.id)

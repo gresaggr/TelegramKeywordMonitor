@@ -55,7 +55,6 @@ class DatabaseOperations:
             account_id, AccountStatus.ERROR, error_message, is_active=False
         )
 
-        # Create notification
         async with await self._get_session() as session:
             notification = AccountNotification(
                 account_id=account_id,
@@ -65,7 +64,6 @@ class DatabaseOperations:
             session.add(notification)
             await session.commit()
 
-        # Send admin notification if configured
         if settings.TELEGRAM_BOT_TOKEN and settings.ADMIN_TELEGRAM_CHAT_ID:
             await self._send_admin_notification(account_id, error_message, error_type)
 

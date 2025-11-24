@@ -132,7 +132,6 @@ async def check_payment_status(
     Useful for checking payment after redirect from payment page
     """
     try:
-        # Verify payment belongs to current user
         result = await db.execute(
             select(Payment).where(
                 Payment.yookassa_payment_id == yookassa_payment_id,
@@ -144,7 +143,6 @@ async def check_payment_status(
         if not payment:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
-        # Update payment status from YooKassa
         updated_payment = await yookassa_service.get_payment_status(yookassa_payment_id, db)
 
         if not updated_payment:

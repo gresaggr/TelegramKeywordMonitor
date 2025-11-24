@@ -202,7 +202,6 @@ class MonitoringHandler:
             logger.warning(f"No active monitoring tasks for account {account_id}")
             return None
 
-        # Parse all channels
         all_channels = self._parse_channels(tasks)
         if not all_channels:
             logger.error(f"No valid channels for account {account_id}")
@@ -210,17 +209,14 @@ class MonitoringHandler:
 
         logger.info(f"Setting up monitoring for account {account_id} on channels: {all_channels}")
 
-        # Create handler
         handler = await self.create_message_handler(account_id, all_channels)
 
-        # Initialize client if needed
         if not client.is_connected:
             await client.connect()
 
         if not client.is_initialized:
             await client.initialize()
 
-        # Add handler
         client.add_handler(handler, group=account_id)
 
         return handler

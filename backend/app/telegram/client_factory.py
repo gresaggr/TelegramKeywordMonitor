@@ -68,7 +68,6 @@ class ClientFactory:
 
             await client.connect()
 
-            # Check if already authorized
             try:
                 await client.get_me()
                 logger.info(f"Account {account.id} already authorized")
@@ -76,10 +75,8 @@ class ClientFactory:
             except:
                 pass
 
-            # Send authentication code
             sent_code = await client.send_code(account.phone_number)
 
-            # Save phone_code_hash in separate session
             from sqlalchemy.ext.asyncio import async_sessionmaker
             from app.db.session import engine
             async_session = async_sessionmaker(engine, expire_on_commit=False)

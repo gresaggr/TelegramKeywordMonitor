@@ -109,10 +109,8 @@ class BillingService:
         if not user:
             return None
 
-        # Get active stats
         active_accounts, active_tasks = await BillingService.get_user_active_stats(user_id, db)
 
-        # Calculate cost for billing period (in hours)
         billing_hours = settings.BALANCE_CHECK_INTERVAL / 3600
         hourly_cost = BillingService.calculate_hourly_cost(active_accounts, active_tasks)
         period_cost = hourly_cost * billing_hours
@@ -121,7 +119,6 @@ class BillingService:
             logger.debug(f"User {user_id}: No active services, skipping deduction")
             return user.balance
 
-        # Deduct balance (but not below 0)
         old_balance = user.balance
         new_balance = max(0.0, old_balance - period_cost)
 
@@ -138,7 +135,6 @@ class BillingService:
             f"Balance: {old_balance:.4f} -> {new_balance:.4f}"
         )
 
-        # If balance reached 0, stop all accounts and tasks
         if new_balance == 0 and old_balance > 0:
             await BillingService.stop_all_user_services(user_id, user, db)
 
@@ -152,7 +148,6 @@ class BillingService:
 
         logger.warning(f"User {user_id}: Balance reached 0, stopping all services")
 
-        # Get all active accounts
         result = await db.execute(
             select(TelegramAccount)
             .where(
@@ -162,7 +157,6 @@ class BillingService:
         )
         accounts = result.scalars().all()
 
-        # Stop all accounts
         for account in accounts:
             try:
                 await telegram_manager.stop_client(account.id, db)
@@ -180,7 +174,6 @@ class BillingService:
 
         await db.commit()
 
-        # Send notification if chat_id is configured
         if user.default_telegram_chat_id:
             message = (
                 "⚠️ *Balance Alert*\n\n"

@@ -71,8 +71,7 @@ class TaskService:
             db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Create a new monitoring task"""
-        # Verify account ownership
-        account = await self._get_user_account(account_id, user, db)
+        await self._get_user_account(account_id, user, db)
 
         # Check task limit
         result = await db.execute(
@@ -83,7 +82,6 @@ class TaskService:
         if task_count >= settings.MAXIMUM_NUMBER_OF_TASKS:
             raise ValueError(f"Maximum number of monitoring tasks ({settings.MAXIMUM_NUMBER_OF_TASKS}) reached")
 
-        # Validate limits
         self._validate_keywords(task_data.whitelist_keywords, "Whitelist")
         self._validate_keywords(task_data.blacklist_keywords, "Blacklist")
         self._validate_replacements(task_data.replacements)
@@ -116,13 +114,10 @@ class TaskService:
             db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Update a monitoring task"""
-        # Verify account ownership
         await self._get_user_account(account_id, user, db)
 
-        # Get task
         task = await self._get_task(account_id, task_id, db)
 
-        # Validate limits
         if task_data.whitelist_keywords is not None:
             self._validate_keywords(task_data.whitelist_keywords, "Whitelist")
         if task_data.blacklist_keywords is not None:
@@ -130,7 +125,6 @@ class TaskService:
         if task_data.replacements is not None:
             self._validate_replacements(task_data.replacements)
 
-        # Update fields
         if task_data.name is not None:
             task.name = task_data.name
         if task_data.whitelist_keywords is not None:

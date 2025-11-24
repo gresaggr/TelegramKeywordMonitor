@@ -40,11 +40,9 @@ class AccountService:
             db: AsyncSession
     ) -> TelegramAccountResponse:
         """Create a new Telegram account"""
-        # Check balance
         if not await billing_service.check_balance_before_start(user.id, db):
             raise ValueError("Insufficient balance. Please top up your balance to add accounts.")
 
-        # Check for duplicate phone number
         result = await db.execute(
             select(TelegramAccount).where(
                 TelegramAccount.user_id == user.id,
@@ -54,7 +52,6 @@ class AccountService:
         if result.scalar_one_or_none():
             raise ValueError(f"Account with phone number {account_data.phone_number} already exists")
 
-        # Check if phone number is active on other users
         result = await db.execute(
             select(TelegramAccount).where(
                 TelegramAccount.phone_number == account_data.phone_number,
@@ -196,7 +193,6 @@ class AccountService:
         """Start account monitoring"""
         account = await self._get_user_account(account_id, user, db)
 
-        # Check balance before starting
         if not await billing_service.check_balance_before_start(user.id, db):
             raise ValueError("Insufficient balance. Please top up your balance to start monitoring.")
 
@@ -243,7 +239,6 @@ class AccountService:
         await db.execute(delete(TelegramAccount).where(TelegramAccount.id == account_id))
         await db.commit()
 
-    # Monitoring task methods (delegate to TaskService)
     async def create_monitoring_task(
             self,
             account_id: int,
@@ -252,10 +247,8 @@ class AccountService:
             db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Create monitoring task"""
-        # Check if forward_to_chat_id is accessible
         account = await self._get_user_account(account_id, user, db)
 
-        # Verify chat access
         client = telegram_manager.clients.get(account_id)
         if client:
             try:
@@ -267,7 +260,6 @@ class AccountService:
 
         result = await self.task_service.create_task(account_id, task_data, user, db)
 
-        # Update monitoring if account is active
         if account.status == AccountStatus.ACTIVE and account.is_active:
             await telegram_manager.update_monitoring(account_id, db)
 
@@ -284,7 +276,6 @@ class AccountService:
         """Update monitoring task"""
         result = await self.task_service.update_task(account_id, task_id, task_data, user, db)
 
-        # Update monitoring if account is active
         account = await self._get_user_account(account_id, user, db)
         if account.status == AccountStatus.ACTIVE and account.is_active:
             await telegram_manager.update_monitoring(account_id, db)
@@ -299,7 +290,6 @@ class AccountService:
             db: AsyncSession
     ) -> MonitoringTaskResponse:
         """Start monitoring task"""
-        # Check balance before starting
         if not await billing_service.check_balance_before_start(user.id, db):
             raise ValueError("Insufficient balance. Please top up your balance to start task.")
 
@@ -363,7 +353,6 @@ class AccountService:
             account_id, notification_id, user, db
         )
 
-    # Helper methods
     async def _get_user_account(
             self,
             account_id: int,
@@ -388,7 +377,6 @@ class AccountService:
             db: AsyncSession
     ) -> TelegramAccountResponse:
         """Convert account to response model"""
-        # Count unread notifications
         result = await db.execute(
             select(func.count(AccountNotification.id))
             .where(
@@ -398,7 +386,6 @@ class AccountService:
         )
         unread_count = result.scalar() or 0
 
-        # Get monitoring tasks
         result = await db.execute(
             select(MonitoringTask).where(MonitoringTask.account_id == account.id)
         )
