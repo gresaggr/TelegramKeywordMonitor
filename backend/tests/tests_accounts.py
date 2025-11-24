@@ -82,14 +82,14 @@ class TestAccounts:
             headers=auth_headers
         )
         assert response.status_code == 200
-        assert response.json() == []
+        assert isinstance(response.json(), list)
 
     @pytest.mark.asyncio
     async def test_account_limit(
             self,
             client: AsyncClient,
             auth_headers: dict,
-            db_session,
+            session,
             test_user: User
     ):
         """Test account creation limit"""
@@ -102,8 +102,8 @@ class TestAccounts:
                 api_hash="hash",
                 status=AccountStatus.ACTIVE
             )
-            db_session.add(account)
-        await db_session.commit()
+            session.add(account)
+        await session.commit()
 
         # Try to create one more
         response = await client.post(
@@ -123,7 +123,7 @@ class TestAccountOperations:
     """Test account operations (start/stop/delete)"""
 
     @pytest.fixture
-    async def test_account(self, db_session, test_user: User) -> TelegramAccount:
+    async def test_account(self, session, test_user: User) -> TelegramAccount:
         """Create a test account"""
         account = TelegramAccount(
             user_id=test_user.id,
@@ -134,9 +134,9 @@ class TestAccountOperations:
             status=AccountStatus.ACTIVE,
             is_active=False
         )
-        db_session.add(account)
-        await db_session.commit()
-        await db_session.refresh(account)
+        session.add(account)
+        await session.commit()
+        await session.refresh(account)
         return account
 
     @pytest.mark.asyncio

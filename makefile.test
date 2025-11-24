@@ -1,0 +1,80 @@
+.PHONY: test test-cov test-fast test-auth test-accounts test-tasks test-billing test-security test-utils clean-test help
+
+help:
+	@echo "Available commands:"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-cov      - Run tests with coverage report"
+	@echo "  make test-fast     - Run tests without coverage"
+	@echo "  make test-auth     - Run authentication tests only"
+	@echo "  make test-accounts - Run account tests only"
+	@echo "  make test-tasks    - Run task tests only"
+	@echo "  make test-billing  - Run billing tests only"
+	@echo "  make test-security - Run security tests only"
+	@echo "  make test-utils    - Run utility tests only"
+	@echo "  make clean-test    - Clean test artifacts"
+
+test:
+	@echo "Running all tests with coverage..."
+	pytest backend/tests/ -v --asyncio-mode=auto --cov=backend/app --cov-report=html --cov-report=term-missing
+
+test-cov:
+	@echo "Running tests with detailed coverage..."
+	pytest backend/tests/ -v --asyncio-mode=auto --cov=backend/app --cov-report=html --cov-report=term-missing --cov-report=xml
+
+test-fast:
+	@echo "Running tests without coverage..."
+	pytest backend/tests/ -v --asyncio-mode=auto
+
+test-auth:
+	@echo "Running authentication tests..."
+	pytest backend/tests/test_auth.py -v --asyncio-mode=auto
+
+test-accounts:
+	@echo "Running account tests..."
+	pytest backend/tests/test_accounts.py -v --asyncio-mode=auto
+
+test-tasks:
+	@echo "Running task tests..."
+	pytest backend/tests/test_tasks.py -v --asyncio-mode=auto
+
+test-billing:
+	@echo "Running billing tests..."
+	pytest backend/tests/test_billing.py -v --asyncio-mode=auto
+
+test-security:
+	@echo "Running security tests..."
+	pytest backend/tests/test_security.py -v --asyncio-mode=auto
+
+test-utils:
+	@echo "Running utility tests..."
+	pytest backend/tests/test_utils.py -v --asyncio-mode=auto
+
+clean-test:
+	@echo "Cleaning test artifacts..."
+	rm -rf test.db
+	rm -rf .pytest_cache
+	rm -rf htmlcov
+	rm -rf .coverage
+	rm -rf backend/.pytest_cache
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@echo "Test artifacts cleaned!"
+
+install-test-deps:
+	@echo "Installing test dependencies..."
+	pip install -r backend/requirements-test.txt
+
+lint:
+	@echo "Running linters..."
+	flake8 backend/app backend/tests --max-line-length=120 --exclude=__pycache__,venv,.venv
+	black backend/app backend/tests --check
+	isort backend/app backend/tests --check-only
+
+format:
+	@echo "Formatting code..."
+	black backend/app backend/tests
+	isort backend/app backend/tests
+
+type-check:
+	@echo "Running type checker..."
+	mypy backend/app --ignore-missing-imports

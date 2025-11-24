@@ -8,6 +8,8 @@ help:
 	@echo "  make down         - Остановить все сервисы"
 	@echo "  make restart      - Перезапустить сервисы"
 	@echo "  make clean        - Очистить временные файлы"
+	@echo "  make test          - Run all tests"
+
 
 build:
 	docker-compose build
@@ -29,3 +31,6 @@ rebuild-up:
  	@echo "Servives rebuilded and start at http://localhost:8000"
 
 
+test:
+	@echo "Running all tests with coverage..."
+	pytest backend/tests/ -v --asyncio-mode=auto --cov=backend/app --cov-report=html --cov-report=term-missing

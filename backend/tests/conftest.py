@@ -2,7 +2,7 @@
 """Pytest configuration and fixtures"""
 import asyncio
 import pytest
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
 from httpx import AsyncClient, ASGITransport
@@ -23,43 +23,75 @@ engine = create_async_engine(
     echo=False
 )
 
-new_session = async_sessionmaker(bind=engine, expire_on_commit=False)
+TestingSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
 
-async def get_test_session() -> AsyncGenerator[AsyncSession, None]:
-    async with new_session() as session:
-        yield session
+async def override_get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    async with TestingSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
 
 
-app.dependency_overrides[get_async_session] = get_test_session
+app.dependency_overrides[get_async_session] = override_get_async_session
 
 
 @pytest.fixture(scope="session")
 def event_loop():
-    return asyncio.get_event_loop()
+    """Create an instance of the default event loop for the test session."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
 
 @pytest.fixture(scope="session", autouse=True)
 async def setup_db():
+    """Setup test database"""
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
+    yield
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture(scope="function", autouse=True)
+async def clean_tables():
+    """Clean all tables before each test"""
+    async with engine.begin() as connection:
+        # Delete data from all tables but keep structure
+        for table in reversed(Base.metadata.sorted_tables):
+            await connection.execute(table.delete())
+    yield
 
 
 @pytest.fixture(scope="function")
-async def session():
-     async with new_session() as session:
+async def session() -> AsyncGenerator[AsyncSession, None]:
+    """Get test database session"""
+    async with TestingSessionLocal() as session:
         yield session
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def client() -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    """Get test HTTP client"""
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        follow_redirects=False
+    ) as ac:
         yield ac
 
 
-
 @pytest.fixture
-async def test_user(db_session: AsyncSession) -> User:
+async def test_user(session: AsyncSession) -> User:
     """Create test user"""
     user = User(
         email="test@example.com",
@@ -73,9 +105,9 @@ async def test_user(db_session: AsyncSession) -> User:
         default_system_version="Test OS",
         default_app_version="1.0.0"
     )
-    db_session.add(user)
-    await db_session.commit()
-    await db_session.refresh(user)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
     return user
 
 
@@ -83,9 +115,10 @@ async def test_user(db_session: AsyncSession) -> User:
 async def auth_headers(client: AsyncClient, test_user: User) -> dict:
     """Get authentication headers for test user"""
     response = await client.post(
-        f"{settings.API_V1_PREFIX}/auth/login/",
+        f"{settings.API_V1_PREFIX}/auth/login",
         json={"email": "test@example.com", "password": "testpass123"}
     )
+    assert response.status_code == 200
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 

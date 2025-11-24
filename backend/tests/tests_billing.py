@@ -41,12 +41,12 @@ class TestBillingService:
     @pytest.mark.asyncio
     async def test_get_user_active_stats_empty(
             self,
-            db_session: AsyncSession,
+            session: AsyncSession,
             test_user: User
     ):
         """Test getting stats with no active services"""
         accounts, tasks = await BillingService.get_user_active_stats(
-            test_user.id, db_session
+            test_user.id, session
         )
         assert accounts == 0
         assert tasks == 0
@@ -54,7 +54,7 @@ class TestBillingService:
     @pytest.mark.asyncio
     async def test_get_user_active_stats_with_data(
             self,
-            db_session: AsyncSession,
+            session: AsyncSession,
             test_user: User
     ):
         """Test getting stats with active services"""
@@ -67,8 +67,8 @@ class TestBillingService:
             status=AccountStatus.ACTIVE,
             is_active=True
         )
-        db_session.add(account)
-        await db_session.flush()
+        session.add(account)
+        await session.flush()
 
         # Create active task
         task = MonitoringTask(
@@ -81,11 +81,11 @@ class TestBillingService:
             replacements="{}",
             is_active=True
         )
-        db_session.add(task)
-        await db_session.commit()
+        session.add(task)
+        await session.commit()
 
         accounts, tasks = await BillingService.get_user_active_stats(
-            test_user.id, db_session
+            test_user.id, session
         )
         assert accounts == 1
         assert tasks == 1
@@ -93,34 +93,34 @@ class TestBillingService:
     @pytest.mark.asyncio
     async def test_check_balance_before_start_sufficient(
             self,
-            db_session: AsyncSession,
+            session: AsyncSession,
             test_user: User
     ):
         """Test balance check with sufficient balance"""
         result = await BillingService.check_balance_before_start(
-            test_user.id, db_session
+            test_user.id, session
         )
         assert result is True
 
     @pytest.mark.asyncio
     async def test_check_balance_before_start_insufficient(
             self,
-            db_session: AsyncSession,
+            session: AsyncSession,
             test_user: User
     ):
         """Test balance check with insufficient balance"""
         test_user.balance = 0.0
-        await db_session.commit()
+        await session.commit()
 
         result = await BillingService.check_balance_before_start(
-            test_user.id, db_session
+            test_user.id, session
         )
         assert result is False
 
     @pytest.mark.asyncio
     async def test_deduct_balance(
             self,
-            db_session: AsyncSession,
+            session: AsyncSession,
             test_user: User
     ):
         """Test balance deduction"""
@@ -133,8 +133,8 @@ class TestBillingService:
             status=AccountStatus.ACTIVE,
             is_active=True
         )
-        db_session.add(account)
-        await db_session.flush()
+        session.add(account)
+        await session.flush()
 
         task = MonitoringTask(
             account_id=account.id,
@@ -146,11 +146,11 @@ class TestBillingService:
             replacements="{}",
             is_active=True
         )
-        db_session.add(task)
-        await db_session.commit()
+        session.add(task)
+        await session.commit()
 
         initial_balance = test_user.balance
-        new_balance = await BillingService.deduct_balance(test_user.id, db_session)
+        new_balance = await BillingService.deduct_balance(test_user.id, session)
 
         assert new_balance is not None
         assert new_balance < initial_balance
@@ -158,11 +158,11 @@ class TestBillingService:
     @pytest.mark.asyncio
     async def test_deduct_balance_no_services(
             self,
-            db_session: AsyncSession,
+            session: AsyncSession,
             test_user: User
     ):
         """Test balance deduction with no active services"""
         initial_balance = test_user.balance
-        new_balance = await BillingService.deduct_balance(test_user.id, db_session)
+        new_balance = await BillingService.deduct_balance(test_user.id, session)
 
         assert new_balance == initial_balance

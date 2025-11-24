@@ -14,7 +14,7 @@ class TestAuth:
     async def test_register_success(self, client):
         """Test successful user registration"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/register/",
+            f"{settings.API_V1_PREFIX}/auth/register",
             json={
                 "email": "newuser@example.com",
                 "username": "newuser",
@@ -32,7 +32,7 @@ class TestAuth:
     async def test_register_duplicate_email(self, client, test_user: User):
         """Test registration with duplicate email"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/register/",
+            f"{settings.API_V1_PREFIX}/auth/register",
             json={
                 "email": "test@example.com",
                 "username": "anotheruser",
@@ -46,7 +46,7 @@ class TestAuth:
     async def test_register_duplicate_username(self, client, test_user: User):
         """Test registration with duplicate username"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/register/",
+            f"{settings.API_V1_PREFIX}/auth/register",
             json={
                 "email": "another@example.com",
                 "username": "testuser",
@@ -60,7 +60,7 @@ class TestAuth:
     async def test_register_short_password(self, client):
         """Test registration with short password"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/register/",
+            f"{settings.API_V1_PREFIX}/auth/register",
             json={
                 "email": "test@example.com",
                 "username": "testuser",
@@ -73,7 +73,7 @@ class TestAuth:
     async def test_login_success(self, client, test_user: User):
         """Test successful login"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/login/",
+            f"{settings.API_V1_PREFIX}/auth/login",
             json={
                 "email": "test@example.com",
                 "password": "testpass123"
@@ -88,7 +88,7 @@ class TestAuth:
     async def test_login_wrong_password(self, client, test_user: User):
         """Test login with wrong password"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/login/",
+            f"{settings.API_V1_PREFIX}/auth/login",
             json={
                 "email": "test@example.com",
                 "password": "wrongpassword"
@@ -100,7 +100,7 @@ class TestAuth:
     async def test_login_nonexistent_user(self, client):
         """Test login with non-existent user"""
         response = await client.post(
-            f"{settings.API_V1_PREFIX}/auth/login/",
+            f"{settings.API_V1_PREFIX}/auth/login",
             json={
                 "email": "nonexistent@example.com",
                 "password": "password123"
