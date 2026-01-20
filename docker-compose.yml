@@ -41,7 +41,7 @@ services:
       context: .
       dockerfile: ./backend/Dockerfile
     container_name: telegram_monitor_backend
-#    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app/backend
       - ./logs:/app/logs
